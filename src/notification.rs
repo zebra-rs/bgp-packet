@@ -16,7 +16,7 @@ pub struct NotificationPacket {
 
 impl Display for NotificationPacket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Notification").unwrap();
+        writeln!(f, "Notification:").unwrap();
         writeln!(f, " Code: {}", self.code).unwrap();
         writeln!(
             f,
@@ -89,15 +89,15 @@ impl Display for NotifyCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use NotifyCode::*;
         match self {
-            MsgHeaderError => write!(f, "MsgHeaderError"),
-            OpenMsgError => write!(f, "OpenMsgError"),
-            UpdateMsgError => write!(f, "UpdateMsgError"),
-            HoldTimerExpired => write!(f, "HoldTimerExpired"),
-            FsmError => write!(f, "FsmError"),
-            Cease => write!(f, "Cease"),
-            RouteRefreshError => write!(f, "RouteRefreshError"),
-            SendHoldTimeError => write!(f, "SendHoldTimeError"),
-            Unknown(v) => write!(f, "Unknown {}", v),
+            MsgHeaderError => write!(f, "Message Header Error"),
+            OpenMsgError => write!(f, "Open Message Error"),
+            UpdateMsgError => write!(f, "Update Message Error"),
+            HoldTimerExpired => write!(f, "Hold Timer Expired"),
+            FsmError => write!(f, "FSM Error"),
+            Cease => write!(f, "Cease Error"),
+            RouteRefreshError => write!(f, "RouteRefresh Error"),
+            SendHoldTimeError => write!(f, "Send HoldTime Error"),
+            Unknown(v) => write!(f, "Unknown Error {}", v),
         }
     }
 }
@@ -175,6 +175,22 @@ impl From<u8> for OpenError {
             7 => UnsupportedCapability,
             11 => RoleMismatch,
             v => Unknown(v),
+        }
+    }
+}
+
+impl From<OpenError> for u8 {
+    fn from(error: OpenError) -> Self {
+        use OpenError::*;
+        match error {
+            UnsupportedVersionNumber => 1,
+            BadPeerAS => 2,
+            BadBgpIdentifier => 3,
+            UnsupportedOptionalParameter => 4,
+            UnacceptableHoldTime => 6,
+            UnsupportedCapability => 7,
+            RoleMismatch => 11,
+            Unknown(v) => v,
         }
     }
 }
