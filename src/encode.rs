@@ -136,7 +136,7 @@ impl From<NotificationPacket> for BytesMut {
         let mut buf = BytesMut::new();
         let header: BytesMut = notification.header.into();
         buf.put(&header[..]);
-        buf.put_u8(notification.code.0);
+        buf.put_u8(notification.code.into());
         buf.put_u8(notification.sub_code);
         buf.put(&notification.data[..]);
 

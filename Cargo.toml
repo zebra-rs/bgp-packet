@@ -31,6 +31,8 @@ nom = "7"
 nom-derive = "0.10"
 regex = "1.11.1"
 rusticata-macros = "4.1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
 
 [dev-dependencies]
 hex-literal = "0.3"

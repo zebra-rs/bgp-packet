@@ -204,7 +204,7 @@ fn parse_bgp_update_attribute(
 }
 
 pub fn nlri_psize(plen: u8) -> usize {
-    ((plen + 7) / 8) as usize
+    plen.div_ceil(8).into()
 }
 
 pub fn parse_ipv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
