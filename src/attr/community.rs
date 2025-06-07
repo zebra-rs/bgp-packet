@@ -1,10 +1,9 @@
 use bytes::{BufMut, BytesMut};
 use nom_derive::NomBE;
-use rusticata_macros::newtype_enum;
 use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 use std::str::FromStr;
-use std::sync::LazyLock;
+use std::sync::LazyLock; // If using Rust 1.70+, otherwise use once_cell::sync::Lazy
 
 use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType};
 
@@ -15,7 +14,6 @@ impl AttributeEncoder for Community {
     fn attr_type() -> AttributeType {
         AttributeType::Community
     }
-
     fn attr_flag() -> AttributeFlags {
         AttributeFlags::OPTIONAL | AttributeFlags::TRANSITIVE
     }
@@ -25,29 +23,23 @@ impl Community {
     pub fn new() -> Self {
         Community(Vec::<u32>::new())
     }
-
     pub fn push(&mut self, value: u32) {
         self.0.push(value)
     }
-
     pub fn sort_uniq(&mut self) {
         let coms: BTreeSet<u32> = self.0.iter().cloned().collect();
         self.0 = coms.into_iter().collect();
     }
-
     pub fn contains(&self, val: &u32) -> bool {
         self.0.contains(val)
     }
-
     pub fn append(&mut self, other: &mut Self) {
         self.0.append(&mut other.0);
         self.sort_uniq();
     }
-
     pub fn is_no_export(&self) -> bool {
-        self.contains(&CommunityValue::NoExport.value())
+        self.contains(&CommunityValue::NO_EXPORT.value())
     }
-
     pub fn encode(&self, buf: &mut BytesMut) {
         let mut attr_buf = BytesMut::new();
         self.0.iter().for_each(|x| attr_buf.put_u32(*x));
@@ -71,7 +63,7 @@ impl FromStr for Community {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let com_strs: Vec<&str> = s.split(' ').collect();
+        let com_strs: Vec<&str> = s.split_whitespace().collect();
         if com_strs.is_empty() {
             return Err(());
         }
@@ -90,86 +82,29 @@ impl FromStr for Community {
 }
 
 /// BGP Community 32 bit value.
-#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+#[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, PartialOrd, Ord)]
 pub struct CommunityValue(pub u32);
 
-newtype_enum! {
-    impl display CommunityValue {
-        GracefulShutdown = 0xFFFF0000u32,
-        AcceptOwn = 0xFFFF0001u32,
-        RouteFilterTranslatedV4 = 0xFFFF0002u32,
-        RouteFilterV4 = 0xFFFF0003u32,
-        RouteFilterTranslatedV6 = 0xFFFF0004u32,
-        RouteFilterV6 = 0xFFFF0005,
-        LlgrStale = 0xFFFF0006,
-        NoLlgr = 0xFFFF0007,
-        AcceptOwnNexthop = 0xFFFF0008,
-        Blackhole = 0xFFFF029Au32,
-        NoExport = 0xFFFFFF01,
-        NoAdvertise = 0xFFFFFF02,
-        NoExportSubconfed = 0xFFFFFF03,
-        LocalAs = 0xFFFFFF03,
-        NoPeer = 0xFFFFFF04,
-    }
-}
-
-static WELLKNOWN_STR_MAP: LazyLock<HashMap<CommunityValue, &'static str>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
-    map.insert(CommunityValue::GracefulShutdown, "graceful-shutdown");
-    map.insert(CommunityValue::AcceptOwn, "accept-own");
-    map.insert(
-        CommunityValue::RouteFilterTranslatedV4,
-        "route-filter-translated-v4",
-    );
-    map.insert(CommunityValue::RouteFilterV4, "route-filter-v4");
-    map.insert(
-        CommunityValue::RouteFilterTranslatedV6,
-        "route-filter-translated-v6",
-    );
-    map.insert(CommunityValue::RouteFilterV6, "route-filter-v6");
-    map.insert(CommunityValue::LlgrStale, "llgr-stale");
-    map.insert(CommunityValue::NoLlgr, "no-llgr");
-    map.insert(CommunityValue::AcceptOwnNexthop, "accept-own-nexthop");
-    map.insert(CommunityValue::Blackhole, "blackhole");
-    map.insert(CommunityValue::NoExport, "no-export");
-    map.insert(CommunityValue::NoAdvertise, "no-advertise");
-    map.insert(CommunityValue::NoExportSubconfed, "no-export-sub-confed");
-    map.insert(CommunityValue::LocalAs, "local-AS");
-    map.insert(CommunityValue::NoPeer, "no-peer");
-    map
-});
-
-static STR_WELLKNOWN_MAP: LazyLock<HashMap<&'static str, CommunityValue>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
-    map.insert("graceful-shutdown", CommunityValue::GracefulShutdown);
-    map.insert("accept-own", CommunityValue::AcceptOwn);
-    map.insert(
-        "route-filter-translated-v4",
-        CommunityValue::RouteFilterTranslatedV4,
-    );
-    map.insert("route-filter-v4", CommunityValue::RouteFilterV4);
-    map.insert(
-        "route-filter-translated-v6",
-        CommunityValue::RouteFilterTranslatedV6,
-    );
-    map.insert("route-filter-v6", CommunityValue::RouteFilterV6);
-    map.insert("llgr-stale", CommunityValue::LlgrStale);
-    map.insert("no-llgr", CommunityValue::NoLlgr);
-    map.insert("accept-own-nexthop", CommunityValue::AcceptOwnNexthop);
-    map.insert("blackhole", CommunityValue::Blackhole);
-    map.insert("no-export", CommunityValue::NoExport);
-    map.insert("no-advertise", CommunityValue::NoAdvertise);
-    map.insert("no-export-sub-confed", CommunityValue::NoExportSubconfed);
-    map.insert("local-AS", CommunityValue::LocalAs);
-    map.insert("no-peer", CommunityValue::NoPeer);
-    map
-});
-
 impl CommunityValue {
+    pub const GRACEFUL_SHUTDOWN: Self = CommunityValue(0xFFFF_0000);
+    pub const ACCEPT_OWN: Self = CommunityValue(0xFFFF_0001);
+    pub const ROUTE_FILTER_TRANSLATED_V4: Self = CommunityValue(0xFFFF_0002);
+    pub const ROUTE_FILTER_V4: Self = CommunityValue(0xFFFF_0003);
+    pub const ROUTE_FILTER_TRANSLATED_V6: Self = CommunityValue(0xFFFF_0004);
+    pub const ROUTE_FILTER_V6: Self = CommunityValue(0xFFFF_0005);
+    pub const LLGR_STALE: Self = CommunityValue(0xFFFF_0006);
+    pub const NO_LLGR: Self = CommunityValue(0xFFFF_0007);
+    pub const ACCEPT_OWN_NEXTHOP: Self = CommunityValue(0xFFFF_0008);
+    pub const BLACKHOLE: Self = CommunityValue(0xFFFF_029A);
+    pub const NO_EXPORT: Self = CommunityValue(0xFFFF_FF01);
+    pub const NO_ADVERTISE: Self = CommunityValue(0xFFFF_FF02);
+    pub const NO_EXPORT_SUBCONFED: Self = CommunityValue(0xFFFF_FF03);
+    pub const LOCAL_AS: Self = CommunityValue(0xFFFF_FF03); // Same value as NO_EXPORT_SUBCONFED
+    pub const NO_PEER: Self = CommunityValue(0xFFFF_FF04);
+
     pub fn from_wellknown_str(s: &str) -> Option<Self> {
         STR_WELLKNOWN_MAP.get(s).cloned()
     }
-
     fn from_digit_str(s: &str) -> Option<Self> {
         let com_strs: Vec<&str> = s.split(':').collect();
         match com_strs.len() {
@@ -192,21 +127,18 @@ impl CommunityValue {
             _ => None,
         }
     }
-
     pub fn from_str(s: &str) -> Option<Self> {
         Self::from_wellknown_str(s).or(Self::from_digit_str(s))
     }
-
     pub fn to_wellknown_str(&self) -> Option<&'static str> {
-        WELLKNOWN_STR_MAP.get(self).cloned()
+        WELLKNOWN_STR_MAP.get(self).copied()
     }
-
     pub fn to_digit_str(&self) -> String {
-        let hval: u32 = (self.0 & 0xFFFF0000) >> 16;
-        let lval: u32 = self.0 & 0x0000FFFF;
-        hval.to_string() + ":" + &lval.to_string()
+        let hval: u32 = (self.0 & 0xFFFF_0000) >> 16;
+        let lval: u32 = self.0 & 0x0000_FFFF;
+        format!("{}:{}", hval, lval)
     }
-
+    /// Returns a String: either a static str for well-known, or the digit-notation for unknown.
     pub fn to_str(&self) -> String {
         if let Some(s) = self.to_wellknown_str() {
             s.to_string()
@@ -214,11 +146,51 @@ impl CommunityValue {
             self.to_digit_str()
         }
     }
-
     pub fn value(&self) -> u32 {
         self.0
     }
 }
+
+// Efficient mappings: value <-> static names
+static WELLKNOWN_STR_MAP: LazyLock<HashMap<CommunityValue, &'static str>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    map.insert(CommunityValue::GRACEFUL_SHUTDOWN, "graceful-shutdown");
+    map.insert(CommunityValue::ACCEPT_OWN, "accept-own");
+    map.insert(CommunityValue::ROUTE_FILTER_TRANSLATED_V4, "route-filter-translated-v4");
+    map.insert(CommunityValue::ROUTE_FILTER_V4, "route-filter-v4");
+    map.insert(CommunityValue::ROUTE_FILTER_TRANSLATED_V6, "route-filter-translated-v6");
+    map.insert(CommunityValue::ROUTE_FILTER_V6, "route-filter-v6");
+    map.insert(CommunityValue::LLGR_STALE, "llgr-stale");
+    map.insert(CommunityValue::NO_LLGR, "no-llgr");
+    map.insert(CommunityValue::ACCEPT_OWN_NEXTHOP, "accept-own-nexthop");
+    map.insert(CommunityValue::BLACKHOLE, "blackhole");
+    map.insert(CommunityValue::NO_EXPORT, "no-export");
+    map.insert(CommunityValue::NO_ADVERTISE, "no-advertise");
+    map.insert(CommunityValue::NO_EXPORT_SUBCONFED, "no-export-sub-confed");
+    map.insert(CommunityValue::LOCAL_AS, "local-AS");
+    map.insert(CommunityValue::NO_PEER, "no-peer");
+    map
+});
+
+static STR_WELLKNOWN_MAP: LazyLock<HashMap<&'static str, CommunityValue>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    map.insert("graceful-shutdown", CommunityValue::GRACEFUL_SHUTDOWN);
+    map.insert("accept-own", CommunityValue::ACCEPT_OWN);
+    map.insert("route-filter-translated-v4", CommunityValue::ROUTE_FILTER_TRANSLATED_V4);
+    map.insert("route-filter-v4", CommunityValue::ROUTE_FILTER_V4);
+    map.insert("route-filter-translated-v6", CommunityValue::ROUTE_FILTER_TRANSLATED_V6);
+    map.insert("route-filter-v6", CommunityValue::ROUTE_FILTER_V6);
+    map.insert("llgr-stale", CommunityValue::LLGR_STALE);
+    map.insert("no-llgr", CommunityValue::NO_LLGR);
+    map.insert("accept-own-nexthop", CommunityValue::ACCEPT_OWN_NEXTHOP);
+    map.insert("blackhole", CommunityValue::BLACKHOLE);
+    map.insert("no-export", CommunityValue::NO_EXPORT);
+    map.insert("no-advertise", CommunityValue::NO_ADVERTISE);
+    map.insert("no-export-sub-confed", CommunityValue::NO_EXPORT_SUBCONFED);
+    map.insert("local-AS", CommunityValue::LOCAL_AS);
+    map.insert("no-peer", CommunityValue::NO_PEER);
+    map
+});
 
 #[cfg(test)]
 mod tests {
@@ -234,7 +206,7 @@ mod tests {
 
         let mut com = Community::new();
         com.push(1u32);
-        com.push(CommunityValue::Blackhole.value());
+        com.push(CommunityValue::BLACKHOLE.value());
         com.push(3u32);
         assert_eq!(format!("{}", com), "0:1 blackhole 0:3");
     }
@@ -254,47 +226,31 @@ mod tests {
         assert_eq!(format!("{}", com), "100:10 graceful-shutdown 65535:65535");
 
         let com = Community::from_str("4294967296 no-export 100:10");
-        if com.is_ok() {
-            panic!("com must be None");
-        }
+        assert!(com.is_err());
 
         let com = Community::from_str("not-well-defined 100:10");
-        if com.is_ok() {
-            panic!("com must be None");
-        }
+        assert!(com.is_err());
 
         let com = Community::from_str("");
-        if com.is_ok() {
-            panic!("com must be None");
-        }
+        assert!(com.is_err());
 
         let com = Community::from_str("-1");
-        if com.is_ok() {
-            panic!("com must be None");
-        }
+        assert!(com.is_err());
 
         let com = Community::from_str("10+");
-        if com.is_ok() {
-            panic!("com must be None");
-        }
+        assert!(com.is_err());
 
         let com = Community::from_str("100:test");
-        if com.is_ok() {
-            panic!("com must be None");
-        }
+        assert!(com.is_err());
 
         let com = Community::from_str("65535:65535").unwrap();
         assert_eq!(format!("{}", com), "65535:65535");
 
         let com = Community::from_str("65535:65536");
-        if com.is_ok() {
-            panic!("com must be None");
-        }
+        assert!(com.is_err());
 
         let com = Community::from_str("65536:65535");
-        if com.is_ok() {
-            panic!("com must be None");
-        }
+        assert!(com.is_err());
 
         let com = Community::from_str("65536").unwrap();
         assert_eq!(format!("{}", com), "1:0");
@@ -307,30 +263,21 @@ mod tests {
     fn to_string() {
         let com = Community::from_str("no-export 100:10 100").unwrap();
         let string = com.to_string();
-
         assert_eq!(string, "0:100 100:10 no-export");
     }
 
     #[test]
     fn contains() {
         let com = Community::from_str("no-export 100:10 100").unwrap();
-        if !com.contains(&100u32) {
-            panic!("Community must contain no-export");
-        }
+        assert!(com.contains(&100u32));
 
         let com = Community::from_str("no-export 100:10 100").unwrap();
-        if !com.contains(&CommunityValue::NoExport.value()) {
-            panic!("Community must contain no-export");
-        }
+        assert!(com.contains(&CommunityValue::NO_EXPORT.value()));
 
-        if com.contains(&CommunityValue::NoAdvertise.value()) {
-            panic!("Community must not contain no-advertise");
-        }
+        assert!(!com.contains(&CommunityValue::NO_ADVERTISE.value()));
 
         let val = CommunityValue::from_digit_str("100:10").unwrap();
-        if !com.contains(&val.0) {
-            panic!("Community must contain 100:10");
-        }
+        assert!(com.contains(&val.0));
     }
 
     #[test]
@@ -350,7 +297,7 @@ mod tests {
     #[test]
     fn value_from_str() {
         let com = CommunityValue::from_str("no-export").unwrap();
-        assert_eq!(com.value(), CommunityValue::NoExport.value());
+        assert_eq!(com.value(), CommunityValue::NO_EXPORT.value());
 
         let com = CommunityValue::from_str("100:10").unwrap();
         assert_eq!(com.value(), (100 << 16) + 10);

@@ -1,11 +1,32 @@
 use bytes::{BufMut, BytesMut};
+use nom::{
+    error::{make_error, ErrorKind},
+    number::complete::{be_u16, be_u64, be_u8},
+};
 use nom_derive::*;
+
+use crate::ParseBe;
 
 use super::{AttributeFlags, AttributeType};
 
-#[derive(Debug, Clone, NomBE)]
+#[derive(Debug, Clone)]
 pub struct Aigp {
     aigp: u64,
+}
+
+impl ParseBe<Aigp> for Aigp {
+    fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Aigp> {
+        let (input, typ) = be_u8(input)?;
+        if typ != 1 {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+        }
+        let (input, length) = be_u16(input)?;
+        if length != 11 {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+        }
+        let (_, aigp) = be_u64(input)?;
+        Ok((input, Aigp { aigp }))
+    }
 }
 
 impl Aigp {
