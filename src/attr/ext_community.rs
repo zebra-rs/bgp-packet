@@ -15,6 +15,13 @@ use super::ext_community_type::ExtCommunityType;
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct ExtCommunity(pub Vec<ExtCommunityValue>);
 
+// impl ParseBe<ExtCommunity> for ExtCommunity {
+//     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], ExtCommunity> {
+//         let (_, ecom) = ExtCommunity::parse(attr)?;
+//         Ok((input, Attribute::ExtCommunity(ecom)))
+//     }
+// }
+
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct ExtCommunityValue {
     pub high_type: u8,

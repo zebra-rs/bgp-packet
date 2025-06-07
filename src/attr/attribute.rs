@@ -1,9 +1,16 @@
-use crate::{Afi, Safi};
+use crate::{
+    many0, parse_bgp_nlri_ipv6_prefix, parse_bgp_nlri_vpnv4_prefix, Afi, ParseBe,
+    RouteDistinguisher, Safi,
+};
 use bytes::{BufMut, BytesMut};
 use ipnet::{Ipv4Net, Ipv6Net};
+use nom::{
+    error::{make_error, ErrorKind},
+    number::complete::{be_u128, be_u32, be_u8},
+};
 use nom_derive::*;
 use rusticata_macros::newtype_enum;
-use std::net::Ipv6Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use super::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, ClusterList,
@@ -11,7 +18,7 @@ use super::{
     OriginatorId,
 };
 
-#[derive(Debug, Eq, PartialEq, NomBE)]
+#[derive(Debug, Eq, PartialEq, NomBE, Clone)]
 pub struct AttributeType(pub u8);
 
 newtype_enum! {
@@ -49,8 +56,8 @@ pub enum Attribute {
     Community(Community),
     OriginatorId(OriginatorId),
     ClusterList(ClusterList),
-    MpReachNlri(MpNlriAttr),
-    MpUnreachNlri(MpNlriAttr),
+    MpReachNlri(MpNlriReachAttr),
+    MpUnreachNlri(MpNlriUnreachAttr),
     ExtCommunity(ExtCommunity),
     ExtIpv6Community(ExtIpv6Community),
     Aigp(Aigp),
@@ -89,8 +96,74 @@ pub struct MpNlriUnreachHeader {
 }
 
 #[derive(Clone, Debug)]
-pub struct MpNlriAttr {
+pub struct MpNlriReachAttr {
     pub next_hop: Option<Ipv6Addr>,
     pub ipv6_prefix: Vec<Ipv6Net>,
     pub vpnv4_prefix: Vec<Ipv4Net>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MpNlriUnreachAttr {
+    pub ipv6_prefix: Vec<Ipv6Net>,
+    pub vpnv4_prefix: Vec<Ipv4Net>,
+}
+
+impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
+    fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
+        if input.len() < size_of::<MpNlriReachHeader>() {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
+        }
+        let (input, header) = MpNlriReachHeader::parse(input)?;
+        if header.afi == Afi::Ip6 && header.safi == Safi::Unicast {
+            if header.nhop_len != 16 {
+                return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+            }
+            let (input, nhop) = be_u128(input)?;
+            let nhop: Ipv6Addr = Ipv6Addr::from(nhop);
+            let (input, _snpa) = be_u8(input)?;
+            let (_, updates) = many0(parse_bgp_nlri_ipv6_prefix)(input)?;
+            let mp_nlri = MpNlriReachAttr {
+                next_hop: Some(nhop),
+                ipv6_prefix: updates,
+                vpnv4_prefix: Vec::new(),
+            };
+            return Ok((input, mp_nlri));
+        }
+        if header.afi == Afi::Ip && header.safi == Safi::MplsVpn {
+            println!("nhop len {}", header.nhop_len);
+            // 12 = 8 + 4.
+            let (input, rd) = RouteDistinguisher::parse(input)?;
+            let (input, nhop) = be_u32(input)?;
+            let nhop: Ipv4Addr = Ipv4Addr::from(nhop);
+            println!("{}:{}", rd, nhop);
+            let (input, _snpa) = be_u8(input)?;
+            let (_, updates) = many0(parse_bgp_nlri_vpnv4_prefix)(input)?;
+            println!("{:?}", updates);
+            let mp_nlri = MpNlriReachAttr {
+                next_hop: None,
+                ipv6_prefix: Vec::new(),
+                vpnv4_prefix: updates,
+            };
+            return Ok((input, mp_nlri));
+        }
+        Err(nom::Err::Error(make_error(input, ErrorKind::Tag)))
+    }
+}
+
+impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
+    fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
+        if input.len() < size_of::<MpNlriUnreachHeader>() {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
+        }
+        let (input, header) = MpNlriUnreachHeader::parse(input)?;
+        if header.afi != Afi::Ip6 || header.safi != Safi::Unicast {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+        }
+        let (_, withdrawal) = many0(parse_bgp_nlri_ipv6_prefix)(input)?;
+        let mp_nlri = MpNlriUnreachAttr {
+            ipv6_prefix: withdrawal,
+            vpnv4_prefix: Vec::new(),
+        };
+        Ok((input, mp_nlri))
+    }
 }

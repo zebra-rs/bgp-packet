@@ -1,4 +1,5 @@
-use super::attr::Attribute;
+use crate::Attr;
+
 use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
 use ipnet::Ipv4Net;
 use nom_derive::*;
@@ -7,7 +8,7 @@ use nom_derive::*;
 pub struct UpdatePacket {
     pub header: BgpHeader,
     #[nom(Ignore)]
-    pub attrs: Vec<Attribute>,
+    pub attrs: Vec<Attr>,
     #[nom(Ignore)]
     pub ipv4_update: Vec<Ipv4Net>,
     #[nom(Ignore)]

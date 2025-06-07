@@ -2,7 +2,7 @@ use bytes::{BufMut, BytesMut};
 
 use crate::nlri_psize;
 
-use super::attr::Attribute;
+use crate::Attr;
 use super::{BgpHeader, NotificationPacket, OpenPacket, UpdatePacket};
 
 impl From<BgpHeader> for BytesMut {
@@ -71,46 +71,57 @@ impl From<UpdatePacket> for BytesMut {
 
         for attr in update.attrs.iter() {
             match attr {
-                Attribute::Origin(attr) => {
+                Attr::Origin(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::As4Path(attr) => {
+                Attr::As2Path(_) => {
+                    // TODO: Implement As2Path encoding
+                }
+                Attr::As4Path(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::NextHop(attr) => {
+                Attr::NextHop(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::Med(attr) => {
+                Attr::Med(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::LocalPref(attr) => {
+                Attr::LocalPref(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::AtomicAggregate(attr) => {
+                Attr::AtomicAggregate(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::Aggregator2(attr) => {
+                Attr::Aggregator2(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::Aggregator4(attr) => {
+                Attr::Aggregator4(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::OriginatorId(attr) => {
+                Attr::OriginatorId(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::ClusterList(attr) => {
+                Attr::ClusterList(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::Community(attr) => {
+                Attr::Community(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::ExtCommunity(attr) => {
+                Attr::ExtendedCom(attr) => {
                     attr.encode(&mut buf);
                 }
-                Attribute::ExtIpv6Community(attr) => {
+                Attr::Aigp(attr) => {
                     attr.encode(&mut buf);
                 }
-                _ => {}
+                Attr::LargeCom(attr) => {
+                    attr.encode(&mut buf);
+                }
+                Attr::MpReachNlri(_) => {
+                    // TODO: Implement MpReachNlri encoding
+                }
+                Attr::MpUnreachNlri(_) => {
+                    // TODO: Implement MpUnreachNlri encoding
+                }
             }
         }
         let attr_len: u16 = (buf.len() - attr_len_pos - 2) as u16;

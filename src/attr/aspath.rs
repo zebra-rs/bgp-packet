@@ -1,8 +1,13 @@
 use bytes::{BufMut, BytesMut};
+use nom::multi::count;
+use nom::number::complete::{be_u16, be_u32};
+use nom::IResult;
 use nom_derive::*;
 use std::collections::VecDeque;
 use std::fmt;
 use std::str::FromStr;
+
+use crate::{many0, ParseBe};
 
 use super::aspath_token::{tokenizer, Token};
 use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType};
@@ -30,6 +35,33 @@ pub struct As2Segment {
 #[derive(Clone, Debug)]
 pub struct As2Path {
     pub segs: Vec<As2Segment>,
+}
+
+impl ParseBe<As2Path> for As2Path {
+    fn parse_be(input: &[u8]) -> IResult<&[u8], As2Path> {
+        let (input, segs) = many0(parse_bgp_attr_as2_segment)(input)?;
+        Ok((input, As2Path { segs: segs.into() }))
+    }
+}
+
+fn parse_bgp_attr_as2_segment(input: &[u8]) -> IResult<&[u8], As2Segment> {
+    let (input, header) = AsSegmentHeader::parse(input)?;
+    let (input, asns) = count(be_u16, header.length as usize)(input)?;
+    let segment = As2Segment {
+        typ: header.typ,
+        asn: asns.into_iter().collect(),
+    };
+    Ok((input, segment))
+}
+
+fn parse_bgp_attr_as4_segment(input: &[u8]) -> IResult<&[u8], As4Segment> {
+    let (input, header) = AsSegmentHeader::parse(input)?;
+    let (input, asns) = count(be_u32, header.length as usize)(input)?;
+    let segment = As4Segment {
+        typ: header.typ,
+        asn: asns.into_iter().collect(),
+    };
+    Ok((input, segment))
 }
 
 #[derive(Clone, Debug)]
@@ -84,6 +116,15 @@ impl fmt::Display for As4Segment {
 #[derive(Clone, Debug)]
 pub struct As4Path {
     pub segs: VecDeque<As4Segment>,
+}
+
+impl ParseBe<As4Path> for As4Path {
+    fn parse_be(input: &[u8]) -> IResult<&[u8], As4Path> {
+        // let (attr, input) = input.split_at(length as usize);
+        println!("XX As4Path len {}", input.len());
+        let (input, segs) = many0(parse_bgp_attr_as4_segment)(input)?;
+        Ok((input, As4Path { segs: segs.into() }))
+    }
 }
 
 impl fmt::Display for As4Path {
