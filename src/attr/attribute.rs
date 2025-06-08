@@ -14,7 +14,7 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 
 use super::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, ClusterList,
-    Community, ExtCommunity, ExtIpv6Community, LargeCommunity, LocalPref, Med, NextHopAttr, Origin,
+    Community, ExtCommunity, ExtIpv6Community, LargeCommunity, LocalPref, Med, NexthopAttr, Origin,
     OriginatorId,
 };
 
@@ -47,7 +47,7 @@ pub enum Attribute {
     Origin(Origin),
     As2Path(As2Path),
     As4Path(As4Path),
-    NextHop(NextHopAttr),
+    NextHop(NexthopAttr),
     Med(Med),
     LocalPref(LocalPref),
     AtomicAggregate(AtomicAggregate),

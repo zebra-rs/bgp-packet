@@ -7,10 +7,10 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::{many0, ParseBe};
+use crate::{many0, AttrType, ParseBe};
 
 use super::aspath_token::{tokenizer, Token};
-use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType};
+use super::{AttrEmitter, AttrFlags};
 
 pub const AS_SET: u8 = 1;
 pub const AS_SEQ: u8 = 2;
@@ -78,7 +78,7 @@ impl As4Segment {
         }
     }
 
-    pub fn encode(&self, buf: &mut BytesMut) {
+    pub fn emit(&self, buf: &mut BytesMut) {
         buf.put_u8(self.typ);
         buf.put_u8(self.asn.len() as u8);
         self.asn.iter().for_each(|x| buf.put_u32(*x));
@@ -118,22 +118,28 @@ pub struct As4Path {
     pub segs: VecDeque<As4Segment>,
 }
 
+impl AttrEmitter for As4Path {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_transitive(true)
+    }
+
+    fn attr_type(&self) -> AttrType {
+        AttrType::AsPath
+    }
+
+    fn len(&self) -> Option<usize> {
+        None
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        self.segs.iter().for_each(|x| x.emit(buf));
+    }
+}
+
 impl ParseBe<As4Path> for As4Path {
     fn parse_be(input: &[u8]) -> IResult<&[u8], As4Path> {
         let (input, segs) = many0(parse_bgp_attr_as4_segment)(input)?;
         Ok((input, As4Path { segs: segs.into() }))
-    }
-}
-
-impl fmt::Display for As4Path {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let v = self
-            .segs
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<String>>()
-            .join(" ");
-        write!(f, "{v}")
     }
 }
 
@@ -195,27 +201,11 @@ impl FromStr for As4Path {
     }
 }
 
-impl AttributeEncoder for As4Path {
-    fn attr_type() -> AttributeType {
-        AttributeType::AsPath
-    }
-
-    fn attr_flag() -> AttributeFlags {
-        AttributeFlags::TRANSITIVE
-    }
-}
-
 impl As4Path {
     pub fn new() -> Self {
         Self {
             segs: VecDeque::new(),
         }
-    }
-
-    pub fn encode(&self, buf: &mut BytesMut) {
-        let mut attr_buf = BytesMut::new();
-        self.segs.iter().for_each(|x| x.encode(&mut attr_buf));
-        encode_tlv::<Self>(buf, attr_buf);
     }
 
     pub fn prepend(&self, other: Self) -> Self {

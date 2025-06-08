@@ -71,21 +71,20 @@ impl From<UpdatePacket> for BytesMut {
 
         for attr in update.attrs.iter() {
             match attr {
-                Attr::Origin(_v) => {
+                Attr::Origin(_) => {
                     attr.emit(&mut buf);
-                    // v.encode(&mut buf);
                 }
                 Attr::As2Path(_) => {
                     // TODO: Implement As2Path encoding
                 }
-                Attr::As4Path(attr) => {
-                    attr.encode(&mut buf);
+                Attr::As4Path(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::NextHop(attr) => {
-                    attr.encode(&mut buf);
+                Attr::NextHop(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::Med(attr) => {
-                    attr.encode(&mut buf);
+                Attr::Med(_) => {
+                    attr.emit(&mut buf);
                 }
                 Attr::LocalPref(attr) => {
                     attr.encode(&mut buf);

@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use super::attr::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
-    ExtCommunity, LargeCommunity, LocalPref, Med, MpNlriReachAttr, NextHopAttr, Origin,
+    ExtCommunity, LargeCommunity, LocalPref, Med, MpNlriReachAttr, NexthopAttr, Origin,
     RouteDistinguisher,
 };
 use super::*;
@@ -11,6 +11,8 @@ use ipnet::{Ipv4Net, Ipv6Net};
 use nom::bytes::streaming::take;
 use nom::combinator::{map, peek};
 use nom::error::{make_error, ErrorKind};
+use nom::number::complete::be_u32;
+//use nom::number::complete::be_u32;
 use nom::number::streaming::{be_u16, be_u8};
 use nom::IResult;
 use nom_derive::*;
@@ -100,7 +102,7 @@ pub enum Attr {
     #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(true))")]
     As4Path(As4Path),
     #[nom(Selector = "AttrSelector(AttrType::NextHop, None)")]
-    NextHop(NextHopAttr),
+    NextHop(NexthopAttr),
     #[nom(Selector = "AttrSelector(AttrType::Med, None)")]
     Med(Med),
     #[nom(Selector = "AttrSelector(AttrType::LocalPref, None)")]
@@ -133,6 +135,7 @@ impl Attr {
     pub fn emit(&self, buf: &mut BytesMut) {
         match self {
             Attr::Origin(v) => v.attr_emit(buf),
+            Attr::As4Path(v) => v.attr_emit(buf),
             _ => {
                 //
             }
@@ -282,5 +285,15 @@ pub fn parse_bgp_packet(input: &[u8], as4: bool) -> IResult<&[u8], BgpPacket> {
         BgpType::Notification => map(parse_bgp_notification_packet, BgpPacket::Notification)(input),
         BgpType::Keepalive => map(BgpHeader::parse, BgpPacket::Keepalive)(input),
         _ => Err(nom::Err::Error(make_error(input, ErrorKind::Eof))),
+    }
+}
+
+impl ParseBe<Ipv4Addr> for Ipv4Addr {
+    fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
+        if input.len() < 4 {
+            return Err(nom::Err::Incomplete(nom::Needed::new(4)));
+        }
+        let (input, addr) = be_u32(input)?;
+        Ok((input, Self::from(addr)))
     }
 }

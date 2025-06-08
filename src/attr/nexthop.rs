@@ -1,24 +1,29 @@
+use std::net::Ipv4Addr;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{AttributeFlags, AttributeType};
+use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
 
 #[derive(Clone, Debug, NomBE)]
-pub struct NextHopAttr {
-    pub next_hop: [u8; 4],
+pub struct NexthopAttr {
+    pub next_hop: Ipv4Addr,
 }
 
-impl NextHopAttr {
-    const LEN: u8 = 4;
-
-    fn flags() -> AttributeFlags {
-        AttributeFlags::TRANSITIVE
+impl AttrEmitter for NexthopAttr {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_transitive(true)
     }
 
-    pub fn encode(&self, buf: &mut BytesMut) {
-        buf.put_u8(Self::flags().bits());
-        buf.put_u8(AttributeType::NextHop.0);
-        buf.put_u8(Self::LEN);
-        buf.put(&self.next_hop[..]);
+    fn attr_type(&self) -> AttrType {
+        AttrType::NextHop
+    }
+
+    fn len(&self) -> Option<usize> {
+        Some(4)
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        buf.put(&self.next_hop.octets()[..]);
     }
 }

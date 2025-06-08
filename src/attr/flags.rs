@@ -54,8 +54,3 @@ pub struct AttrFlags {
     pub transitive: bool,
     pub optional: bool,
 }
-
-pub fn testx() -> AttrFlags {
-    let x = AttrFlags::new().with_optional(true);
-    x.with_extended(true)
-}
