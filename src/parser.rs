@@ -63,6 +63,31 @@ impl From<u8> for AttrType {
     }
 }
 
+impl From<AttrType> for u8 {
+    fn from(attr_type: AttrType) -> Self {
+        use AttrType::*;
+        match attr_type {
+            Origin => 1,
+            AsPath => 2,
+            NextHop => 3,
+            Med => 4,
+            LocalPref => 5,
+            AtomicAggregate => 6,
+            Aggregator => 7,
+            Community => 8,
+            OriginatorId => 9,
+            ClusterList => 10,
+            MpReachNlri => 14,
+            MpUnreachNlri => 15,
+            ExtendedCom => 16,
+            ExtendedIpv6Com => 25,
+            Aigp => 26,
+            LargeCom => 32,
+            Unknown(v) => v,
+        }
+    }
+}
+
 struct AttrSelector(AttrType, Option<bool>);
 
 #[derive(Debug, NomBE, Clone)]
