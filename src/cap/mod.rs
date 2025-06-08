@@ -8,7 +8,9 @@ pub mod mp;
 pub use mp::CapabilityMultiProtocol;
 
 pub mod refresh;
-pub use refresh::{CapabilityEnhancedRouteRefresh, CapabilityRouteRefresh};
+pub use refresh::{
+    CapabilityEnhancedRouteRefresh, CapabilityRouteRefresh, CapabilityRouteRefreshCisco,
+};
 
 pub mod extend;
 pub use extend::CapabilityExtendedMessage;

@@ -12,6 +12,15 @@ impl Emit for CapabilityRouteRefresh {
 }
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
+pub struct CapabilityRouteRefreshCisco {}
+
+impl Emit for CapabilityRouteRefreshCisco {
+    fn code(&self) -> CapabilityCode {
+        CapabilityCode::RouteRefreshCisco
+    }
+}
+
+#[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapabilityEnhancedRouteRefresh {}
 
 impl Emit for CapabilityEnhancedRouteRefresh {

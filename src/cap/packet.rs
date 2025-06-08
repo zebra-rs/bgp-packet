@@ -46,6 +46,8 @@ pub enum CapabilityPacket {
     SoftwareVersion(CapabilitySoftwareVersion),
     #[nom(Selector = "CapabilityCode::PathLimit")]
     PathLimit(CapabilityPathLimit),
+    #[nom(Selector = "CapabilityCode::RouteRefreshCisco")]
+    RouteRefreshCisco(CapabilityRouteRefreshCisco),
     #[nom(Selector = "_")]
     Unknown(CapabilityUnknown),
 }
@@ -92,6 +94,9 @@ impl CapabilityPacket {
                 m.emit(buf, false);
             }
             Self::PathLimit(m) => {
+                m.emit(buf, false);
+            }
+            Self::RouteRefreshCisco(m) => {
                 m.emit(buf, false);
             }
             Self::Unknown(m) => {
