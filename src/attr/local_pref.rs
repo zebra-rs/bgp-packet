@@ -1,6 +1,7 @@
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
+use crate::{AttrEmitter, AttrFlags, AttrType};
 use super::{AttributeFlags, AttributeType};
 
 #[derive(Clone, Debug, NomBE)]
@@ -23,6 +24,24 @@ impl LocalPref {
         buf.put_u8(Self::flags().bits());
         buf.put_u8(AttributeType::LocalPref.0);
         buf.put_u8(Self::LEN);
+        buf.put_u32(self.local_pref);
+    }
+}
+
+impl AttrEmitter for LocalPref {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_transitive(true)
+    }
+
+    fn attr_type(&self) -> AttrType {
+        AttrType::LocalPref
+    }
+
+    fn len(&self) -> Option<usize> {
+        Some(4)
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
         buf.put_u32(self.local_pref);
     }
 }

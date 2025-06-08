@@ -2,6 +2,7 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use std::net::Ipv4Addr;
 
+use crate::{AttrEmitter, AttrFlags, AttrType};
 use super::{AttributeFlags, AttributeType};
 
 #[derive(Clone, Debug, NomBE)]
@@ -24,6 +25,10 @@ impl Aggregator2 {
         }
     }
 
+    pub fn ip(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.ip)
+    }
+
     fn flags() -> AttributeFlags {
         AttributeFlags::TRANSITIVE
     }
@@ -41,12 +46,35 @@ impl Aggregator2 {
     }
 }
 
+impl AttrEmitter for Aggregator2 {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_transitive(true)
+    }
+
+    fn attr_type(&self) -> AttrType {
+        AttrType::Aggregator
+    }
+
+    fn len(&self) -> Option<usize> {
+        Some(6)
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        buf.put_u16(self.asn);
+        buf.put(&self.ip[..]);
+    }
+}
+
 impl Aggregator4 {
     pub fn new(asn: u32, id: Ipv4Addr) -> Self {
         Self {
             asn,
             ip: id.octets(),
         }
+    }
+
+    pub fn ip(&self) -> Ipv4Addr {
+        Ipv4Addr::from(self.ip)
     }
 
     fn flags() -> AttributeFlags {
@@ -61,6 +89,25 @@ impl Aggregator4 {
         buf.put_u8(Self::flags().bits());
         buf.put_u8(AttributeType::Aggregator.0);
         buf.put_u8(Self::len());
+        buf.put_u32(self.asn);
+        buf.put(&self.ip[..]);
+    }
+}
+
+impl AttrEmitter for Aggregator4 {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_transitive(true).with_optional(true)
+    }
+
+    fn attr_type(&self) -> AttrType {
+        AttrType::Aggregator
+    }
+
+    fn len(&self) -> Option<usize> {
+        Some(8)
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
         buf.put_u32(self.asn);
         buf.put(&self.ip[..]);
     }

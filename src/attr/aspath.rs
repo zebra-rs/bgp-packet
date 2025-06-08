@@ -143,6 +143,18 @@ impl ParseBe<As4Path> for As4Path {
     }
 }
 
+impl fmt::Display for As4Path {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let v = self
+            .segs
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join(" ");
+        write!(f, "{v}")
+    }
+}
+
 macro_rules! segment_reset {
     ($typ:expr, $before:expr, $after:expr, $seg:expr, $aspath:expr) => {
         if $typ != $before {

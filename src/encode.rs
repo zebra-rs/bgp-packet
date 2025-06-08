@@ -86,20 +86,20 @@ impl From<UpdatePacket> for BytesMut {
                 Attr::Med(_) => {
                     attr.emit(&mut buf);
                 }
-                Attr::LocalPref(attr) => {
-                    attr.encode(&mut buf);
+                Attr::LocalPref(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::AtomicAggregate(attr) => {
-                    attr.encode(&mut buf);
+                Attr::AtomicAggregate(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::Aggregator2(attr) => {
-                    attr.encode(&mut buf);
+                Attr::Aggregator2(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::Aggregator4(attr) => {
-                    attr.encode(&mut buf);
+                Attr::Aggregator4(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::OriginatorId(attr) => {
-                    attr.encode(&mut buf);
+                Attr::OriginatorId(_) => {
+                    attr.emit(&mut buf);
                 }
                 Attr::ClusterList(attr) => {
                     attr.encode(&mut buf);
