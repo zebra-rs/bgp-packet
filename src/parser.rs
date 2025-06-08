@@ -136,6 +136,18 @@ impl Attr {
         match self {
             Attr::Origin(v) => v.attr_emit(buf),
             Attr::As4Path(v) => v.attr_emit(buf),
+            Attr::NextHop(v) => v.attr_emit(buf),
+            Attr::Med(v) => v.attr_emit(buf),
+            Attr::LocalPref(v) => v.attr_emit(buf),
+            Attr::AtomicAggregate(v) => v.attr_emit(buf),
+            Attr::Aggregator2(v) => v.attr_emit(buf),
+            Attr::Aggregator4(v) => v.attr_emit(buf),
+            Attr::OriginatorId(v) => v.attr_emit(buf),
+            Attr::ClusterList(v) => v.attr_emit(buf),
+            Attr::Community(v) => v.attr_emit(buf),
+            Attr::ExtendedCom(v) => v.attr_emit(buf),
+            Attr::LargeCom(v) => v.attr_emit(buf),
+            Attr::Aigp(v) => v.attr_emit(buf),
             _ => {
                 //
             }

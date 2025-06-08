@@ -5,6 +5,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::LazyLock; // If using Rust 1.70+, otherwise use once_cell::sync::Lazy
 
+use crate::{AttrEmitter, AttrFlags, AttrType};
 use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType};
 
 #[derive(Clone, Debug, Default, NomBE)]
@@ -44,6 +45,26 @@ impl Community {
         let mut attr_buf = BytesMut::new();
         self.0.iter().for_each(|x| attr_buf.put_u32(*x));
         encode_tlv::<Self>(buf, attr_buf);
+    }
+}
+
+impl AttrEmitter for Community {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_optional(true).with_transitive(true)
+    }
+
+    fn attr_type(&self) -> AttrType {
+        AttrType::Community
+    }
+
+    fn len(&self) -> Option<usize> {
+        None  // Length is variable, let attr_emit buffer and calculate
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        for &community in &self.0 {
+            buf.put_u32(community);
+        }
     }
 }
 

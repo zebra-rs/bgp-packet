@@ -4,6 +4,7 @@ use std::fmt;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
+use crate::{AttrEmitter, AttrFlags, AttrType};
 use super::{
     encode_tlv,
     ext_community_token::{tokenizer, Token},
@@ -85,6 +86,28 @@ impl ExtCommunity {
         let mut attr_buf = BytesMut::new();
         self.0.iter().for_each(|x| x.encode(&mut attr_buf));
         encode_tlv::<Self>(buf, attr_buf);
+    }
+}
+
+impl AttrEmitter for ExtCommunity {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_optional(true).with_transitive(true)
+    }
+
+    fn attr_type(&self) -> AttrType {
+        AttrType::ExtendedCom
+    }
+
+    fn len(&self) -> Option<usize> {
+        None  // Length is variable, let attr_emit buffer and calculate
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        for ext_community in &self.0 {
+            buf.put_u8(ext_community.high_type);
+            buf.put_u8(ext_community.low_type);
+            buf.put(&ext_community.val[..]);
+        }
     }
 }
 

@@ -4,7 +4,8 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;
 
-use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType};
+use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType, AttrEmitter, AttrFlags};
+use crate::AttrType;
 
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct LargeCommunity(pub Vec<LargeCommunityValue>);
@@ -16,6 +17,28 @@ impl AttributeEncoder for LargeCommunity {
 
     fn attr_flag() -> AttributeFlags {
         AttributeFlags::OPTIONAL | AttributeFlags::TRANSITIVE
+    }
+}
+
+impl AttrEmitter for LargeCommunity {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_optional(true).with_transitive(true)
+    }
+
+    fn attr_type(&self) -> AttrType {
+        AttrType::LargeCom
+    }
+
+    fn len(&self) -> Option<usize> {
+        None  // Length is variable, let attr_emit buffer and calculate
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        for large_community in &self.0 {
+            buf.put_u32(large_community.global);
+            buf.put_u32(large_community.local1);
+            buf.put_u32(large_community.local2);
+        }
     }
 }
 

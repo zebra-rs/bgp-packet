@@ -3,7 +3,6 @@ use bytes::{BufMut, BytesMut};
 use crate::nlri_psize;
 
 use super::{BgpHeader, NotificationPacket, OpenPacket, UpdatePacket};
-use crate::Attr;
 
 impl From<BgpHeader> for BytesMut {
     fn from(header: BgpHeader) -> Self {
@@ -70,59 +69,7 @@ impl From<UpdatePacket> for BytesMut {
         let attr_pos: std::ops::Range<usize> = attr_len_pos..attr_len_pos + 2;
 
         for attr in update.attrs.iter() {
-            match attr {
-                Attr::Origin(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::As2Path(_) => {
-                    // TODO: Implement As2Path encoding
-                }
-                Attr::As4Path(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::NextHop(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::Med(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::LocalPref(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::AtomicAggregate(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::Aggregator2(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::Aggregator4(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::OriginatorId(_) => {
-                    attr.emit(&mut buf);
-                }
-                Attr::ClusterList(attr) => {
-                    attr.encode(&mut buf);
-                }
-                Attr::Community(attr) => {
-                    attr.encode(&mut buf);
-                }
-                Attr::ExtendedCom(attr) => {
-                    attr.encode(&mut buf);
-                }
-                Attr::Aigp(attr) => {
-                    attr.encode(&mut buf);
-                }
-                Attr::LargeCom(attr) => {
-                    attr.encode(&mut buf);
-                }
-                Attr::MpReachNlri(_) => {
-                    // TODO: Implement MpReachNlri encoding
-                }
-                Attr::MpUnreachNlri(_) => {
-                    // TODO: Implement MpUnreachNlri encoding
-                }
-            }
+            attr.emit(&mut buf);
         }
         let attr_len: u16 = (buf.len() - attr_len_pos - 2) as u16;
         buf[attr_pos].copy_from_slice(&attr_len.to_be_bytes());

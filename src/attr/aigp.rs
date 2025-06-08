@@ -7,7 +7,8 @@ use nom_derive::*;
 
 use crate::ParseBe;
 
-use super::{AttributeFlags, AttributeType};
+use super::{AttributeFlags, AttributeType, AttrEmitter, AttrFlags};
+use crate::AttrType;
 
 #[derive(Debug, Clone)]
 pub struct Aigp {
@@ -53,5 +54,25 @@ impl Aigp {
         let mut f = flags.clone();
         f.remove(AttributeFlags::EXTENDED);
         f.bits() == Self::flags().bits()
+    }
+}
+
+impl AttrEmitter for Aigp {
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_optional(true)
+    }
+
+    fn attr_type(&self) -> AttrType {
+        AttrType::Aigp
+    }
+
+    fn len(&self) -> Option<usize> {
+        Some(11)  // Fixed length: Type(1) + Length(2) + Value(8) = 11
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        buf.put_u8(1);      // Type
+        buf.put_u16(11);    // Length
+        buf.put_u64(self.aigp); // Value
     }
 }
