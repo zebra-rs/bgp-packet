@@ -2,8 +2,8 @@ use bytes::{BufMut, BytesMut};
 
 use crate::nlri_psize;
 
-use crate::Attr;
 use super::{BgpHeader, NotificationPacket, OpenPacket, UpdatePacket};
+use crate::Attr;
 
 impl From<BgpHeader> for BytesMut {
     fn from(header: BgpHeader) -> Self {
@@ -71,35 +71,35 @@ impl From<UpdatePacket> for BytesMut {
 
         for attr in update.attrs.iter() {
             match attr {
-                Attr::Origin(attr) => {
-                    attr.encode(&mut buf);
+                Attr::Origin(_) => {
+                    attr.emit(&mut buf);
                 }
                 Attr::As2Path(_) => {
                     // TODO: Implement As2Path encoding
                 }
-                Attr::As4Path(attr) => {
-                    attr.encode(&mut buf);
+                Attr::As4Path(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::NextHop(attr) => {
-                    attr.encode(&mut buf);
+                Attr::NextHop(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::Med(attr) => {
-                    attr.encode(&mut buf);
+                Attr::Med(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::LocalPref(attr) => {
-                    attr.encode(&mut buf);
+                Attr::LocalPref(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::AtomicAggregate(attr) => {
-                    attr.encode(&mut buf);
+                Attr::AtomicAggregate(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::Aggregator2(attr) => {
-                    attr.encode(&mut buf);
+                Attr::Aggregator2(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::Aggregator4(attr) => {
-                    attr.encode(&mut buf);
+                Attr::Aggregator4(_) => {
+                    attr.emit(&mut buf);
                 }
-                Attr::OriginatorId(attr) => {
-                    attr.encode(&mut buf);
+                Attr::OriginatorId(_) => {
+                    attr.emit(&mut buf);
                 }
                 Attr::ClusterList(attr) => {
                     attr.encode(&mut buf);

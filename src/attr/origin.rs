@@ -2,7 +2,7 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use std::fmt;
 
-use super::{AttributeFlags, AttributeType};
+use crate::{AttrEmitter, AttrFlags, AttrType};
 
 pub const ORIGIN_IGP: u8 = 0;
 pub const ORIGIN_EGP: u8 = 1;
@@ -14,27 +14,26 @@ pub struct Origin {
 }
 
 impl Origin {
-    const LEN: u8 = 1;
-
     pub fn new(origin: u8) -> Self {
         Self { origin }
     }
+}
 
-    fn flags() -> AttributeFlags {
-        AttributeFlags::TRANSITIVE
+impl AttrEmitter for Origin {
+    fn attr_type(&self) -> AttrType {
+        AttrType::Origin
     }
 
-    pub fn encode(&self, buf: &mut BytesMut) {
-        buf.put_u8(Self::flags().bits());
-        buf.put_u8(AttributeType::Origin.0);
-        buf.put_u8(Self::LEN);
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_transitive(true)
+    }
+
+    fn len(&self) -> Option<usize> {
+        Some(1)
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
         buf.put_u8(self.origin);
-    }
-
-    pub fn validate_flags(flags: &AttributeFlags) -> bool {
-        let mut f = flags.clone();
-        f.remove(AttributeFlags::EXTENDED);
-        f.bits() == Self::flags().bits()
     }
 }
 

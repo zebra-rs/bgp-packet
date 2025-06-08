@@ -2,14 +2,17 @@ use std::convert::TryInto;
 
 use super::attr::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
-    ExtCommunity, LargeCommunity, LocalPref, Med, MpNlriReachAttr, NextHopAttr, Origin,
+    ExtCommunity, LargeCommunity, LocalPref, Med, MpNlriReachAttr, NexthopAttr, Origin,
     RouteDistinguisher,
 };
 use super::*;
+use bytes::BytesMut;
 use ipnet::{Ipv4Net, Ipv6Net};
 use nom::bytes::streaming::take;
 use nom::combinator::{map, peek};
 use nom::error::{make_error, ErrorKind};
+use nom::number::complete::be_u32;
+//use nom::number::complete::be_u32;
 use nom::number::streaming::{be_u16, be_u8};
 use nom::IResult;
 use nom_derive::*;
@@ -62,6 +65,31 @@ impl From<u8> for AttrType {
     }
 }
 
+impl From<AttrType> for u8 {
+    fn from(attr_type: AttrType) -> Self {
+        use AttrType::*;
+        match attr_type {
+            Origin => 1,
+            AsPath => 2,
+            NextHop => 3,
+            Med => 4,
+            LocalPref => 5,
+            AtomicAggregate => 6,
+            Aggregator => 7,
+            Community => 8,
+            OriginatorId => 9,
+            ClusterList => 10,
+            MpReachNlri => 14,
+            MpUnreachNlri => 15,
+            ExtendedCom => 16,
+            ExtendedIpv6Com => 25,
+            Aigp => 26,
+            LargeCom => 32,
+            Unknown(v) => v,
+        }
+    }
+}
+
 struct AttrSelector(AttrType, Option<bool>);
 
 #[derive(Debug, NomBE, Clone)]
@@ -74,7 +102,7 @@ pub enum Attr {
     #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(true))")]
     As4Path(As4Path),
     #[nom(Selector = "AttrSelector(AttrType::NextHop, None)")]
-    NextHop(NextHopAttr),
+    NextHop(NexthopAttr),
     #[nom(Selector = "AttrSelector(AttrType::Med, None)")]
     Med(Med),
     #[nom(Selector = "AttrSelector(AttrType::LocalPref, None)")]
@@ -103,38 +131,52 @@ pub enum Attr {
     LargeCom(LargeCommunity),
 }
 
-fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
-    let (input, flags) = be_u8(input)?;
-    let flags = AttributeFlags::from_bits(flags).unwrap();
-    let (input, attr_type) = be_u8(input)?;
-    let attr_type: AttrType = attr_type.into();
-    let ext_len: usize = if flags.is_extended() { 2 } else { 1 };
-    let (input, exts) = take(ext_len)(input)?;
-    let attr_len = if exts.len() == 1 {
-        exts[0] as u16
-    } else {
-        ((exts[0] as u16) << 8) + exts[1] as u16
-    };
-    //     println!("type_code {}", type_code);
-
-    let as4opt = if matches!(attr_type, AttrType::AsPath | AttrType::Aggregator) {
-        Some(as4)
-    } else {
-        None
-    };
-
-    let (attr, _input) = input.split_at(attr_len as usize);
-
-    Attr::parse_be(attr, AttrSelector(attr_type, as4opt))
+impl Attr {
+    pub fn emit(&self, buf: &mut BytesMut) {
+        match self {
+            Attr::Origin(v) => v.attr_emit(buf),
+            Attr::As4Path(v) => v.attr_emit(buf),
+            _ => {
+                //
+            }
+        }
+    }
 }
 
-pub fn parse_bgp_attribute_as(as4: bool) -> impl Fn(&[u8]) -> IResult<&[u8], Attr> {
-    move |i: &[u8]| parse_bgp_attribute(i, as4)
+fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
+    // Parse the attribute flags and type code
+    let (input, flags_byte) = be_u8(input)?;
+    let flags = AttributeFlags::from_bits(flags_byte).unwrap();
+    let (input, attr_type_byte) = be_u8(input)?;
+    let attr_type: AttrType = attr_type_byte.into();
+
+    // Decide extended length presence and parse length
+    let (input, length_bytes) = if flags.is_extended() {
+        take(2usize)(input)?
+    } else {
+        take(1usize)(input)?
+    };
+    let attr_len = u16::from_be_bytes(if length_bytes.len() == 2 {
+        [length_bytes[0], length_bytes[1]]
+    } else {
+        [0, length_bytes[0]]
+    });
+
+    // Only AS_PATH or AGGREGATOR care about as4 extension
+    let as4_opt = matches!(attr_type, AttrType::AsPath | AttrType::Aggregator).then_some(as4);
+
+    // Split out the payload for this attribute
+    let (attr_payload, input) = input.split_at(attr_len as usize);
+
+    // Parse the attribute using the appropriate selector (may use as4 option)
+    let (_, attr) = Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt))?;
+
+    Ok((input, attr))
 }
 
 fn parse_bgp_update_attribute(input: &[u8], length: u16, as4: bool) -> IResult<&[u8], Vec<Attr>> {
     let (attr, input) = input.split_at(length as usize);
-    let (_, attrs) = many0(parse_bgp_attribute_as(as4))(attr)?;
+    let (_, attrs) = many0(|i| parse_bgp_attribute(i, as4))(attr)?;
     Ok((input, attrs))
 }
 
@@ -243,5 +285,15 @@ pub fn parse_bgp_packet(input: &[u8], as4: bool) -> IResult<&[u8], BgpPacket> {
         BgpType::Notification => map(parse_bgp_notification_packet, BgpPacket::Notification)(input),
         BgpType::Keepalive => map(BgpHeader::parse, BgpPacket::Keepalive)(input),
         _ => Err(nom::Err::Error(make_error(input, ErrorKind::Eof))),
+    }
+}
+
+impl ParseBe<Ipv4Addr> for Ipv4Addr {
+    fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
+        if input.len() < 4 {
+            return Err(nom::Err::Incomplete(nom::Needed::new(4)));
+        }
+        let (input, addr) = be_u32(input)?;
+        Ok((input, Self::from(addr)))
     }
 }

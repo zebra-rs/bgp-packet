@@ -156,9 +156,15 @@ static WELLKNOWN_STR_MAP: LazyLock<HashMap<CommunityValue, &'static str>> = Lazy
     let mut map = HashMap::new();
     map.insert(CommunityValue::GRACEFUL_SHUTDOWN, "graceful-shutdown");
     map.insert(CommunityValue::ACCEPT_OWN, "accept-own");
-    map.insert(CommunityValue::ROUTE_FILTER_TRANSLATED_V4, "route-filter-translated-v4");
+    map.insert(
+        CommunityValue::ROUTE_FILTER_TRANSLATED_V4,
+        "route-filter-translated-v4",
+    );
     map.insert(CommunityValue::ROUTE_FILTER_V4, "route-filter-v4");
-    map.insert(CommunityValue::ROUTE_FILTER_TRANSLATED_V6, "route-filter-translated-v6");
+    map.insert(
+        CommunityValue::ROUTE_FILTER_TRANSLATED_V6,
+        "route-filter-translated-v6",
+    );
     map.insert(CommunityValue::ROUTE_FILTER_V6, "route-filter-v6");
     map.insert(CommunityValue::LLGR_STALE, "llgr-stale");
     map.insert(CommunityValue::NO_LLGR, "no-llgr");
@@ -176,9 +182,15 @@ static STR_WELLKNOWN_MAP: LazyLock<HashMap<&'static str, CommunityValue>> = Lazy
     let mut map = HashMap::new();
     map.insert("graceful-shutdown", CommunityValue::GRACEFUL_SHUTDOWN);
     map.insert("accept-own", CommunityValue::ACCEPT_OWN);
-    map.insert("route-filter-translated-v4", CommunityValue::ROUTE_FILTER_TRANSLATED_V4);
+    map.insert(
+        "route-filter-translated-v4",
+        CommunityValue::ROUTE_FILTER_TRANSLATED_V4,
+    );
     map.insert("route-filter-v4", CommunityValue::ROUTE_FILTER_V4);
-    map.insert("route-filter-translated-v6", CommunityValue::ROUTE_FILTER_TRANSLATED_V6);
+    map.insert(
+        "route-filter-translated-v6",
+        CommunityValue::ROUTE_FILTER_TRANSLATED_V6,
+    );
     map.insert("route-filter-v6", CommunityValue::ROUTE_FILTER_V6);
     map.insert("llgr-stale", CommunityValue::LLGR_STALE);
     map.insert("no-llgr", CommunityValue::NO_LLGR);
