@@ -2,7 +2,9 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use std::fmt;
 
-use super::{AttributeFlags, AttributeType};
+use crate::AttrType;
+
+use super::{AttrEmitter, AttrFlags, AttributeFlags, AttributeType};
 
 pub const ORIGIN_IGP: u8 = 0;
 pub const ORIGIN_EGP: u8 = 1;
@@ -11,6 +13,24 @@ pub const ORIGIN_INCOMPLETE: u8 = 2;
 #[derive(Clone, NomBE)]
 pub struct Origin {
     pub origin: u8,
+}
+
+impl AttrEmitter for Origin {
+    fn attr_type(&self) -> AttrType {
+        AttrType::Origin
+    }
+
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_transitive(true)
+    }
+
+    fn len(&self) -> u16 {
+        1
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        buf.put_u8(self.origin);
+    }
 }
 
 impl Origin {

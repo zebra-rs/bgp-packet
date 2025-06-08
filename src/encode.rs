@@ -2,8 +2,8 @@ use bytes::{BufMut, BytesMut};
 
 use crate::nlri_psize;
 
-use crate::Attr;
 use super::{BgpHeader, NotificationPacket, OpenPacket, UpdatePacket};
+use crate::Attr;
 
 impl From<BgpHeader> for BytesMut {
     fn from(header: BgpHeader) -> Self {
@@ -71,8 +71,9 @@ impl From<UpdatePacket> for BytesMut {
 
         for attr in update.attrs.iter() {
             match attr {
-                Attr::Origin(attr) => {
-                    attr.encode(&mut buf);
+                Attr::Origin(_v) => {
+                    attr.emit(&mut buf);
+                    // v.encode(&mut buf);
                 }
                 Attr::As2Path(_) => {
                     // TODO: Implement As2Path encoding

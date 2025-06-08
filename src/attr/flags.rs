@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use serde::Serialize;
 use std::fmt;
 
 bitflags! {
@@ -39,4 +40,22 @@ impl fmt::Display for AttributeFlags {
             .join("|");
         write!(f, "{v}")
     }
+}
+
+use bitfield_struct::bitfield;
+
+#[bitfield(u8, debug = true)]
+#[derive(Serialize, PartialEq)]
+pub struct AttrFlags {
+    pub optional: bool,
+    pub transitive: bool,
+    pub partial: bool,
+    pub extended: bool,
+    #[bits(4)]
+    pub resvd: u8,
+}
+
+pub fn testx() -> AttrFlags {
+    let x = AttrFlags::new().with_optional(true);
+    x.with_extended(true)
 }

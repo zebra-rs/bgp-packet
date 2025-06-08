@@ -54,3 +54,6 @@ pub use rd::*;
 
 pub mod aigp;
 pub use aigp::*;
+
+pub mod emitter;
+pub use emitter::*;

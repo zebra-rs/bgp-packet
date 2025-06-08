@@ -120,8 +120,6 @@ pub struct As4Path {
 
 impl ParseBe<As4Path> for As4Path {
     fn parse_be(input: &[u8]) -> IResult<&[u8], As4Path> {
-        // let (attr, input) = input.split_at(length as usize);
-        println!("XX As4Path len {}", input.len());
         let (input, segs) = many0(parse_bgp_attr_as4_segment)(input)?;
         Ok((input, As4Path { segs: segs.into() }))
     }
