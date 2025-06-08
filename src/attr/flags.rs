@@ -47,12 +47,12 @@ use bitfield_struct::bitfield;
 #[bitfield(u8, debug = true)]
 #[derive(Serialize, PartialEq)]
 pub struct AttrFlags {
-    pub optional: bool,
-    pub transitive: bool,
-    pub partial: bool,
-    pub extended: bool,
     #[bits(4)]
     pub resvd: u8,
+    pub extended: bool,
+    pub partial: bool,
+    pub transitive: bool,
+    pub optional: bool,
 }
 
 pub fn testx() -> AttrFlags {
