@@ -149,6 +149,7 @@ impl Attr {
             Attr::Aggregator4(v) => v.attr_emit(buf),
             Attr::OriginatorId(v) => v.attr_emit(buf),
             Attr::ClusterList(v) => v.attr_emit(buf),
+            // Attr::MpReachNlri(v) => v.attr_emit(buf),
             Attr::Community(v) => v.attr_emit(buf),
             Attr::ExtendedCom(v) => v.attr_emit(buf),
             Attr::PmsiTunnel(v) => v.attr_emit(buf),
@@ -226,6 +227,21 @@ pub fn parse_bgp_nlri_ipv6_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
     paddr[..psize].copy_from_slice(&input[..psize]);
     let (input, _) = take(psize)(input)?;
     let prefix = Ipv6Net::new(Ipv6Addr::from(paddr), plen).expect("Ipv6Net create error");
+    Ok((input, prefix))
+}
+
+pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
+    let (input, plen) = be_u8(input)?;
+    let psize = nlri_psize(plen);
+    if input.len() < psize {
+        return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
+    }
+    let mut paddr = [0u8; 16];
+    paddr[..psize].copy_from_slice(&input[..psize]);
+    let (input, _) = take(psize)(input)?;
+    let prefix = Ipv6Net::new(Ipv6Addr::from(paddr), plen).expect("Ipv6Net create error");
+    println!("IPv6 prefix: {}", prefix);
+
     Ok((input, prefix))
 }
 
