@@ -7,7 +7,7 @@ use nom_derive::*;
 
 use crate::ParseBe;
 
-use super::{AttributeFlags, AttributeType, AttrEmitter, AttrFlags};
+use super::{AttrEmitter, AttrFlags, AttributeFlags, AttributeType};
 use crate::AttrType;
 
 #[derive(Debug, Clone)]
@@ -67,12 +67,12 @@ impl AttrEmitter for Aigp {
     }
 
     fn len(&self) -> Option<usize> {
-        Some(11)  // Fixed length: Type(1) + Length(2) + Value(8) = 11
+        Some(11) // Fixed length: Type(1) + Length(2) + Value(8) = 11
     }
 
     fn emit(&self, buf: &mut BytesMut) {
-        buf.put_u8(1);      // Type
-        buf.put_u16(11);    // Length
+        buf.put_u8(1); // Type
+        buf.put_u16(11); // Length
         buf.put_u64(self.aigp); // Value
     }
 }

@@ -5,8 +5,8 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::LazyLock; // If using Rust 1.70+, otherwise use once_cell::sync::Lazy
 
-use crate::{AttrEmitter, AttrFlags, AttrType};
 use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType};
+use crate::{AttrEmitter, AttrFlags, AttrType};
 
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct Community(pub Vec<u32>);
@@ -58,7 +58,7 @@ impl AttrEmitter for Community {
     }
 
     fn len(&self) -> Option<usize> {
-        None  // Length is variable, let attr_emit buffer and calculate
+        None // Length is variable, let attr_emit buffer and calculate
     }
 
     fn emit(&self, buf: &mut BytesMut) {

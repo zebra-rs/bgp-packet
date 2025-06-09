@@ -34,6 +34,7 @@ pub enum AttrType {
     MpReachNlri = 14,
     MpUnreachNlri = 15,
     ExtendedCom = 16,
+    PmsiTunnel = 22,
     ExtendedIpv6Com = 25,
     Aigp = 26,
     LargeCom = 32,
@@ -57,6 +58,7 @@ impl From<u8> for AttrType {
             14 => MpReachNlri,
             15 => MpUnreachNlri,
             16 => ExtendedCom,
+            22 => PmsiTunnel,
             25 => ExtendedIpv6Com,
             26 => Aigp,
             32 => LargeCom,
@@ -82,6 +84,7 @@ impl From<AttrType> for u8 {
             MpReachNlri => 14,
             MpUnreachNlri => 15,
             ExtendedCom => 16,
+            PmsiTunnel => 22,
             ExtendedIpv6Com => 25,
             Aigp => 26,
             LargeCom => 32,
@@ -125,6 +128,8 @@ pub enum Attr {
     MpUnreachNlri(MpNlriUnreachAttr),
     #[nom(Selector = "AttrSelector(AttrType::ExtendedCom, None)")]
     ExtendedCom(ExtCommunity),
+    #[nom(Selector = "AttrSelector(AttrType::PmsiTunnel, None)")]
+    PmsiTunnel(PmsiTunnel),
     #[nom(Selector = "AttrSelector(AttrType::Aigp, None)")]
     Aigp(Aigp),
     #[nom(Selector = "AttrSelector(AttrType::LargeCom, None)")]
@@ -146,6 +151,7 @@ impl Attr {
             Attr::ClusterList(v) => v.attr_emit(buf),
             Attr::Community(v) => v.attr_emit(buf),
             Attr::ExtendedCom(v) => v.attr_emit(buf),
+            Attr::PmsiTunnel(v) => v.attr_emit(buf),
             Attr::LargeCom(v) => v.attr_emit(buf),
             Attr::Aigp(v) => v.attr_emit(buf),
             _ => {
@@ -181,6 +187,7 @@ fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
     let (attr_payload, input) = input.split_at(attr_len as usize);
 
     // Parse the attribute using the appropriate selector (may use as4 option)
+    println!("Attr Type: {:?}", attr_type);
     let (_, attr) = Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt))?;
 
     Ok((input, attr))
@@ -308,4 +315,13 @@ impl ParseBe<Ipv4Addr> for Ipv4Addr {
         let (input, addr) = be_u32(input)?;
         Ok((input, Self::from(addr)))
     }
+}
+
+pub fn u32_u8_3(value: u32) -> [u8; 3] {
+    // Extract the three least significant bytes as big-endian
+    [
+        (value >> 16) as u8, // Most significant byte of the remaining 3 bytes
+        (value >> 8) as u8,  // Middle byte
+        value as u8,         // Least significant byte
+    ]
 }

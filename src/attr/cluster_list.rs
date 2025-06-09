@@ -1,8 +1,8 @@
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use crate::{AttrEmitter, AttrFlags, AttrType};
 use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType};
+use crate::{AttrEmitter, AttrFlags, AttrType};
 
 #[derive(Clone, NomBE, Debug, Default)]
 pub struct ClusterList {

@@ -4,12 +4,12 @@ use std::fmt;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
-use crate::{AttrEmitter, AttrFlags, AttrType};
 use super::{
     encode_tlv,
     ext_community_token::{tokenizer, Token},
     AttributeEncoder, AttributeFlags, AttributeType, RouteDistinguisher, RouteDistinguisherType,
 };
+use crate::{AttrEmitter, AttrFlags, AttrType};
 
 use super::ext_community_type::ExtCommunityType;
 
@@ -99,7 +99,7 @@ impl AttrEmitter for ExtCommunity {
     }
 
     fn len(&self) -> Option<usize> {
-        None  // Length is variable, let attr_emit buffer and calculate
+        None // Length is variable, let attr_emit buffer and calculate
     }
 
     fn emit(&self, buf: &mut BytesMut) {

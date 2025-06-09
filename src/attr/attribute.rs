@@ -15,7 +15,7 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 use super::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, ClusterList,
     Community, ExtCommunity, ExtIpv6Community, LargeCommunity, LocalPref, Med, NexthopAttr, Origin,
-    OriginatorId,
+    OriginatorId, PmsiTunnel,
 };
 
 #[derive(Debug, Eq, PartialEq, NomBE, Clone)]
@@ -36,6 +36,7 @@ newtype_enum! {
         MpReachNlri = 14,
         MpUnreachNlri = 15,
         ExtendedCom = 16,
+        PmsiTunnel = 22,
         ExtendedIpv6Com = 25,
         Aigp = 26,
         LargeCom = 32,
@@ -59,6 +60,7 @@ pub enum Attribute {
     MpReachNlri(MpNlriReachAttr),
     MpUnreachNlri(MpNlriUnreachAttr),
     ExtCommunity(ExtCommunity),
+    PmsiTunnel(PmsiTunnel),
     ExtIpv6Community(ExtIpv6Community),
     Aigp(Aigp),
     LargeCom(LargeCommunity),

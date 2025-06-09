@@ -2,8 +2,8 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use std::net::Ipv4Addr;
 
-use crate::{AttrEmitter, AttrFlags, AttrType};
 use super::{AttributeFlags, AttributeType};
+use crate::{AttrEmitter, AttrFlags, AttrType};
 
 #[derive(Clone, NomBE, Debug)]
 pub struct OriginatorId {

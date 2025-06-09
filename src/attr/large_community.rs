@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;
 
-use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType, AttrEmitter, AttrFlags};
+use super::{encode_tlv, AttrEmitter, AttrFlags, AttributeEncoder, AttributeFlags, AttributeType};
 use crate::AttrType;
 
 #[derive(Clone, Debug, Default, NomBE)]
@@ -30,7 +30,7 @@ impl AttrEmitter for LargeCommunity {
     }
 
     fn len(&self) -> Option<usize> {
-        None  // Length is variable, let attr_emit buffer and calculate
+        None // Length is variable, let attr_emit buffer and calculate
     }
 
     fn emit(&self, buf: &mut BytesMut) {
