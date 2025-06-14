@@ -40,7 +40,7 @@ pub struct As2Path {
 impl ParseBe<As2Path> for As2Path {
     fn parse_be(input: &[u8]) -> IResult<&[u8], As2Path> {
         let (input, segs) = many0(parse_bgp_attr_as2_segment)(input)?;
-        Ok((input, As2Path { segs: segs.into() }))
+        Ok((input, As2Path { segs }))
     }
 }
 

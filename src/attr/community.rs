@@ -5,20 +5,10 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::LazyLock; // If using Rust 1.70+, otherwise use once_cell::sync::Lazy
 
-use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType};
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct Community(pub Vec<u32>);
-
-impl AttributeEncoder for Community {
-    fn attr_type() -> AttributeType {
-        AttributeType::Community
-    }
-    fn attr_flag() -> AttributeFlags {
-        AttributeFlags::OPTIONAL | AttributeFlags::TRANSITIVE
-    }
-}
 
 impl Community {
     pub fn new() -> Self {
@@ -40,11 +30,6 @@ impl Community {
     }
     pub fn is_no_export(&self) -> bool {
         self.contains(&CommunityValue::NO_EXPORT.value())
-    }
-    pub fn encode(&self, buf: &mut BytesMut) {
-        let mut attr_buf = BytesMut::new();
-        self.0.iter().for_each(|x| attr_buf.put_u32(*x));
-        encode_tlv::<Self>(buf, attr_buf);
     }
 }
 

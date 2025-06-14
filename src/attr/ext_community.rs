@@ -5,9 +5,8 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 
 use super::{
-    encode_tlv,
     ext_community_token::{tokenizer, Token},
-    AttributeEncoder, AttributeFlags, AttributeType, RouteDistinguisher, RouteDistinguisherType,
+    RouteDistinguisher, RouteDistinguisherType,
 };
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
@@ -15,13 +14,6 @@ use super::ext_community_type::ExtCommunityType;
 
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct ExtCommunity(pub Vec<ExtCommunityValue>);
-
-// impl ParseBe<ExtCommunity> for ExtCommunity {
-//     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], ExtCommunity> {
-//         let (_, ecom) = ExtCommunity::parse(attr)?;
-//         Ok((input, Attribute::ExtCommunity(ecom)))
-//     }
-// }
 
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct ExtCommunityValue {
@@ -68,24 +60,6 @@ impl fmt::Display for ExtCommunityValue {
             let val = u16::from_be_bytes([self.val[4], self.val[5]]);
             write!(f, "{} {ip}:{val}", sub_type_str(self.low_type))
         }
-    }
-}
-
-impl AttributeEncoder for ExtCommunity {
-    fn attr_type() -> AttributeType {
-        AttributeType::ExtendedCom
-    }
-
-    fn attr_flag() -> AttributeFlags {
-        AttributeFlags::OPTIONAL | AttributeFlags::TRANSITIVE
-    }
-}
-
-impl ExtCommunity {
-    pub fn encode(&self, buf: &mut BytesMut) {
-        let mut attr_buf = BytesMut::new();
-        self.0.iter().for_each(|x| x.encode(&mut attr_buf));
-        encode_tlv::<Self>(buf, attr_buf);
     }
 }
 

@@ -4,21 +4,11 @@ use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;
 
-use super::{encode_tlv, AttrEmitter, AttrFlags, AttributeEncoder, AttributeFlags, AttributeType};
+use super::{AttrEmitter, AttrFlags};
 use crate::AttrType;
 
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct LargeCommunity(pub Vec<LargeCommunityValue>);
-
-impl AttributeEncoder for LargeCommunity {
-    fn attr_type() -> AttributeType {
-        AttributeType::LargeCom
-    }
-
-    fn attr_flag() -> AttributeFlags {
-        AttributeFlags::OPTIONAL | AttributeFlags::TRANSITIVE
-    }
-}
 
 impl AttrEmitter for LargeCommunity {
     fn attr_flags(&self) -> AttrFlags {
@@ -54,12 +44,6 @@ impl LargeCommunity {
     pub fn sort_uniq(&mut self) {
         let coms: BTreeSet<LargeCommunityValue> = self.0.iter().cloned().collect();
         self.0 = coms.into_iter().collect();
-    }
-
-    pub fn encode(&self, buf: &mut BytesMut) {
-        let mut attr_buf = BytesMut::new();
-        self.0.iter().for_each(|x| x.encode(&mut attr_buf));
-        encode_tlv::<Self>(buf, attr_buf);
     }
 }
 

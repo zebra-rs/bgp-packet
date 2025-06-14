@@ -5,7 +5,7 @@ use std::net::{Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
 use super::ext_ipv6_community_token::{tokenizer, Token};
-use super::{encode_tlv, AttributeEncoder, AttributeFlags, AttributeType, ExtCommunitySubType};
+use super::ExtCommunitySubType;
 
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct ExtIpv6Community(pub Vec<ExtIpv6CommunityValue>);
@@ -66,24 +66,6 @@ impl ExtIpv6CommunityValue {
         com.val[0..16].copy_from_slice(&addr.octets());
         com.val[16..18].copy_from_slice(val.to_ne_bytes().as_slice());
         com
-    }
-}
-
-impl AttributeEncoder for ExtIpv6Community {
-    fn attr_type() -> AttributeType {
-        AttributeType::ExtendedIpv6Com
-    }
-
-    fn attr_flag() -> AttributeFlags {
-        AttributeFlags::OPTIONAL | AttributeFlags::TRANSITIVE
-    }
-}
-
-impl ExtIpv6Community {
-    pub fn encode(&self, buf: &mut BytesMut) {
-        let mut attr_buf = BytesMut::new();
-        self.0.iter().for_each(|x| x.encode(&mut attr_buf));
-        encode_tlv::<Self>(buf, attr_buf);
     }
 }
 
