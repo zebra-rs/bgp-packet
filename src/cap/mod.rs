@@ -5,7 +5,7 @@ pub mod packet;
 pub use packet::{CapabilityHeader, CapabilityPacket};
 
 pub mod mp;
-pub use mp::CapabilityMultiProtocol;
+pub use mp::CapMultiProtocol;
 
 pub mod refresh;
 pub use refresh::{

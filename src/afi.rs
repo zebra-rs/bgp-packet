@@ -3,7 +3,7 @@ use nom::IResult;
 use nom_derive::*;
 
 #[repr(u16)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Afi {
     #[default]
     Ip = 1,
@@ -13,7 +13,7 @@ pub enum Afi {
 }
 
 #[repr(u8)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Safi {
     #[default]
     Unicast = 1,
@@ -26,7 +26,7 @@ pub enum Safi {
     Unknown(u8),
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct AfiSafi {
     pub afi: Afi,
     pub safi: Safi,

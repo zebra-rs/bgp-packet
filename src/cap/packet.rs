@@ -23,7 +23,7 @@ impl CapabilityHeader {
 #[nom(Selector = "CapabilityCode")]
 pub enum CapabilityPacket {
     #[nom(Selector = "CapabilityCode::MultiProtocol")]
-    MultiProtocol(CapabilityMultiProtocol),
+    MultiProtocol(CapMultiProtocol),
     #[nom(Selector = "CapabilityCode::RouteRefresh")]
     RouteRefresh(CapabilityRouteRefresh),
     #[nom(Selector = "CapabilityCode::ExtendedMessage")]

@@ -4,14 +4,14 @@ use nom_derive::*;
 use super::{CapabilityCode, Emit};
 use crate::{Afi, Safi};
 
-#[derive(Debug, PartialEq, NomBE, Clone)]
-pub struct CapabilityMultiProtocol {
+#[derive(Debug, PartialEq, NomBE, Clone, Eq, Hash)]
+pub struct CapMultiProtocol {
     afi: Afi,
     res: u8,
     safi: Safi,
 }
 
-impl CapabilityMultiProtocol {
+impl CapMultiProtocol {
     pub fn new(afi: &Afi, safi: &Safi) -> Self {
         Self {
             afi: *afi,
@@ -21,7 +21,7 @@ impl CapabilityMultiProtocol {
     }
 }
 
-impl Emit for CapabilityMultiProtocol {
+impl Emit for CapMultiProtocol {
     fn code(&self) -> CapabilityCode {
         CapabilityCode::MultiProtocol
     }
