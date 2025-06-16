@@ -51,6 +51,15 @@ impl AfiSafis {
     pub fn push(&mut self, afi_safi: AfiSafi) {
         self.0.push(afi_safi);
     }
+
+    pub fn remove(&mut self, afi_safi: &AfiSafi) -> bool {
+        if let Some(pos) = self.0.iter().position(|x| x == afi_safi) {
+            self.0.remove(pos);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 impl From<Afi> for u16 {
