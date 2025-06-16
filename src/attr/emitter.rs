@@ -4,8 +4,15 @@ use crate::{AttrFlags, AttrType};
 
 pub trait AttrEmitter {
     fn attr_flags(&self) -> AttrFlags;
+
     fn attr_type(&self) -> AttrType;
+
     fn len(&self) -> Option<usize>;
+
+    fn is_empty(&self) -> bool {
+        self.len() == Some(0)
+    }
+
     fn emit(&self, buf: &mut BytesMut);
 
     fn attr_emit(&self, buf: &mut BytesMut) {

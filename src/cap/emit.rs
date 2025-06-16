@@ -11,6 +11,10 @@ pub trait Emit {
         0
     }
 
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn emit_value(&self, _buf: &mut BytesMut) {}
 
     fn emit(&self, buf: &mut BytesMut, opt: bool) {

@@ -77,7 +77,7 @@ impl FromStr for Community {
         let mut coms = Community::new();
 
         for s in com_strs.iter() {
-            match CommunityValue::from_str(s) {
+            match CommunityValue::from_readable_str(s) {
                 Some(c) => coms.push(c.value()),
                 None => return Err(()),
             }
@@ -133,7 +133,7 @@ impl CommunityValue {
             _ => None,
         }
     }
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_readable_str(s: &str) -> Option<Self> {
         Self::from_wellknown_str(s).or(Self::from_digit_str(s))
     }
     pub fn to_wellknown_str(&self) -> Option<&'static str> {
@@ -314,13 +314,13 @@ mod tests {
 
     #[test]
     fn value_from_str() {
-        let com = CommunityValue::from_str("no-export").unwrap();
+        let com = CommunityValue::from_readable_str("no-export").unwrap();
         assert_eq!(com.value(), CommunityValue::NO_EXPORT.value());
 
-        let com = CommunityValue::from_str("100:10").unwrap();
+        let com = CommunityValue::from_readable_str("100:10").unwrap();
         assert_eq!(com.value(), (100 << 16) + 10);
 
-        let com = CommunityValue::from_str("6553620").unwrap();
+        let com = CommunityValue::from_readable_str("6553620").unwrap();
         assert_eq!(com.value(), (100 << 16) + 20);
     }
 

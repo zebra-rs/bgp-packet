@@ -1,5 +1,3 @@
-use std::iter::{self, from_fn};
-
 #[derive(Debug, PartialEq)]
 pub enum Token {
     As(u32),
@@ -34,24 +32,28 @@ fn str2as(s: &str) -> Option<u32> {
     }
 }
 
-pub fn tokenizer(input: String) -> Result<Vec<Token>, ()> {
+#[derive(Debug)]
+pub enum TokenizerError {
+    InvalidNumber(String),
+    UnexpectedChar(char),
+}
+
+pub fn tokenizer(input: String) -> Result<Vec<Token>, TokenizerError> {
     let mut tokens = Vec::<Token>::new();
     let mut chars = input.chars().peekable();
 
     while let Some(ch) = chars.next() {
         match ch {
-            ch if ch.is_whitespace() => {
-                continue;
-            }
+            ch if ch.is_whitespace() => continue,
             '0'..='9' => {
-                let s: String = iter::once(ch)
-                    .chain(from_fn(|| {
+                let s: String = std::iter::once(ch)
+                    .chain(std::iter::from_fn(|| {
                         chars.by_ref().next_if(|c| c.is_numeric() || c == &'.')
                     }))
                     .collect();
                 let val = str2as(&s);
                 if val.is_none() {
-                    return Err(());
+                    return Err(TokenizerError::InvalidNumber(s));
                 }
                 tokens.push(Token::As(val.unwrap()));
             }
@@ -61,9 +63,7 @@ pub fn tokenizer(input: String) -> Result<Vec<Token>, ()> {
             ']' => tokens.push(Token::AsConfedSetEnd),
             '(' => tokens.push(Token::AsConfedSeqStart),
             ')' => tokens.push(Token::AsConfedSeqEnd),
-            _ => {
-                return Err(());
-            }
+            other => return Err(TokenizerError::UnexpectedChar(other)),
         }
     }
     Ok(tokens)

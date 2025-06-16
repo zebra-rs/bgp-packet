@@ -1,4 +1,3 @@
-use std::iter::{self, from_fn};
 use std::net::Ipv6Addr;
 
 use regex::Regex;
@@ -23,39 +22,48 @@ fn parse_ipv6_value(s: &str) -> Option<(Ipv6Addr, u16)> {
     Some((addr, val))
 }
 
-pub fn tokenizer(input: String) -> Result<Vec<Token>, ()> {
+#[derive(Debug)]
+pub enum TokenizerError {
+    InvalidIpv6Value(String),
+    UnknownKeyword(String),
+    UnexpectedChar(char),
+}
+
+pub fn tokenizer(input: String) -> Result<Vec<Token>, TokenizerError> {
     let mut tokens = Vec::<Token>::new();
     let mut chars = input.chars().peekable();
 
     while let Some(ch) = chars.next() {
         match ch {
-            ch if ch.is_whitespace() => {
-                continue;
-            }
+            ch if ch.is_whitespace() => continue,
+
             '0'..='9' | 'a'..='f' | '[' => {
-                let s: String = iter::once(ch)
-                    .chain(from_fn(|| {
+                let s: String = std::iter::once(ch)
+                    .chain(std::iter::from_fn(|| {
                         chars
                             .by_ref()
                             .next_if(|c| c.is_alphanumeric() || c == &']' || c == &':' || c == &'@')
                     }))
                     .collect();
-                let (addr, val) = parse_ipv6_value(&s).ok_or(())?;
+                let (addr, val) = parse_ipv6_value(&s)
+                    .ok_or_else(|| TokenizerError::InvalidIpv6Value(s.clone()))?;
                 tokens.push(Token::Rd(addr, val));
             }
+
             'r' | 's' => {
-                let s: String = iter::once(ch)
-                    .chain(from_fn(|| chars.by_ref().next_if(|c| c.is_alphabetic())))
+                let s: String = std::iter::once(ch)
+                    .chain(std::iter::from_fn(|| {
+                        chars.by_ref().next_if(|c| c.is_alphabetic())
+                    }))
                     .collect();
                 match s.as_str() {
                     "rt" => tokens.push(Token::Rt),
                     "soo" => tokens.push(Token::Soo),
-                    _ => return Err(()),
+                    _ => return Err(TokenizerError::UnknownKeyword(s)),
                 }
             }
-            _ => {
-                return Err(());
-            }
+
+            other => return Err(TokenizerError::UnexpectedChar(other)),
         }
     }
     Ok(tokens)
