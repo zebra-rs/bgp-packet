@@ -1,9 +1,10 @@
 use nom::number::complete::{be_u16, be_u8};
 use nom::IResult;
 use nom_derive::*;
+use serde::Serialize;
 
 #[repr(u16)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Serialize)]
 pub enum Afi {
     #[default]
     Ip = 1,
@@ -13,7 +14,7 @@ pub enum Afi {
 }
 
 #[repr(u8)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Serialize)]
 pub enum Safi {
     #[default]
     Unicast = 1,
