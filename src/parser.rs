@@ -171,9 +171,9 @@ fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
 
     // Decide extended length presence and parse length
     let (input, length_bytes) = if flags.is_extended() {
-        take(2usize)(input)?
+        take(2usize).parse(input)?
     } else {
-        take(1usize)(input)?
+        take(1usize).parse(input)?
     };
     let attr_len = u16::from_be_bytes(if length_bytes.len() == 2 {
         [length_bytes[0], length_bytes[1]]
@@ -196,7 +196,7 @@ fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
 
 fn parse_bgp_update_attribute(input: &[u8], length: u16, as4: bool) -> IResult<&[u8], Vec<Attr>> {
     let (attr, input) = input.split_at(length as usize);
-    let (_, attrs) = many0(|i| parse_bgp_attribute(i, as4))(attr)?;
+    let (_, attrs) = many0(|i| parse_bgp_attribute(i, as4)).parse(attr)?;
     Ok((input, attrs))
 }
 
@@ -212,7 +212,7 @@ pub fn parse_ipv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
     }
     let mut paddr = [0u8; 4];
     paddr[..psize].copy_from_slice(&input[..psize]);
-    let (input, _) = take(psize)(input)?;
+    let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net crete error");
     Ok((input, prefix))
 }
@@ -225,7 +225,7 @@ pub fn parse_bgp_nlri_ipv6_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
     }
     let mut paddr = [0u8; 16];
     paddr[..psize].copy_from_slice(&input[..psize]);
-    let (input, _) = take(psize)(input)?;
+    let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv6Net::new(Ipv6Addr::from(paddr), plen).expect("Ipv6Net create error");
     Ok((input, prefix))
 }
@@ -238,7 +238,7 @@ pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
     }
     let mut paddr = [0u8; 16];
     paddr[..psize].copy_from_slice(&input[..psize]);
-    let (input, _) = take(psize)(input)?;
+    let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv6Net::new(Ipv6Addr::from(paddr), plen).expect("Ipv6Net create error");
     println!("IPv6 prefix: {}", prefix);
 
@@ -247,7 +247,7 @@ pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
 
 fn parse_bgp_nlri_ipv4(input: &[u8], length: u16) -> IResult<&[u8], Vec<Ipv4Net>> {
     let (nlri, input) = input.split_at(length as usize);
-    let (_, prefix) = many0(parse_ipv4_prefix)(nlri)?;
+    let (_, prefix) = many0(parse_ipv4_prefix).parse(nlri)?;
     Ok((input, prefix))
 }
 
@@ -259,11 +259,11 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
         return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
     }
     // MPLS Label.
-    let (input, label) = take(3usize)(input)?;
+    let (input, label) = take(3usize).parse(input)?;
     println!("Label: {:?}", label);
 
     // RD.
-    let (input, rd) = RouteDistinguisher::parse(input)?;
+    let (input, rd) = RouteDistinguisher::parse_be(input)?;
     println!("RD: {}", rd);
 
     // Adjust plen to MPLS Label and Route Distinguisher.
@@ -274,14 +274,14 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
     // IPv4 prefix.
     let mut paddr = [0u8; 4];
     paddr[..psize].copy_from_slice(&input[..psize]);
-    let (input, _) = take(psize)(input)?;
+    let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net create error");
 
     Ok((input, prefix))
 }
 
 fn parse_bgp_update_packet(input: &[u8], as4: bool) -> IResult<&[u8], UpdatePacket> {
-    let (input, mut packet) = UpdatePacket::parse(input)?;
+    let (input, mut packet) = UpdatePacket::parse_be(input)?;
     let (input, withdraw_len) = be_u16(input)?;
     let (input, mut withdrawal) = parse_bgp_nlri_ipv4(input, withdraw_len)?;
     packet.ipv4_withdraw.append(&mut withdrawal);
@@ -295,9 +295,9 @@ fn parse_bgp_update_packet(input: &[u8], as4: bool) -> IResult<&[u8], UpdatePack
 }
 
 fn parse_bgp_notification_packet(input: &[u8]) -> IResult<&[u8], NotificationPacket> {
-    let (input, packet) = NotificationPacket::parse(input)?;
+    let (input, packet) = NotificationPacket::parse_be(input)?;
     let len = packet.header.length - BGP_HEADER_LEN - 2;
-    let (input, _data) = take(len as usize)(input)?;
+    let (input, _data) = take(len as usize).parse(input)?;
     Ok((input, packet))
 }
 
@@ -310,15 +310,15 @@ pub fn peek_bgp_length(input: &[u8]) -> usize {
 }
 
 pub fn parse_bgp_packet(input: &[u8], as4: bool) -> IResult<&[u8], BgpPacket> {
-    let (_, header) = peek(BgpHeader::parse)(input)?;
+    let (_, header) = peek(BgpHeader::parse_be).parse(input)?;
     match header.typ {
-        BgpType::Open => map(OpenPacket::parse_packet, BgpPacket::Open)(input),
+        BgpType::Open => map(OpenPacket::parse_packet, BgpPacket::Open).parse(input),
         BgpType::Update => {
             let (input, p) = parse_bgp_update_packet(input, as4)?;
             Ok((input, BgpPacket::Update(p)))
         }
-        BgpType::Notification => map(parse_bgp_notification_packet, BgpPacket::Notification)(input),
-        BgpType::Keepalive => map(BgpHeader::parse, BgpPacket::Keepalive)(input),
+        BgpType::Notification => map(parse_bgp_notification_packet, BgpPacket::Notification).parse(input),
+        BgpType::Keepalive => map(BgpHeader::parse_be, BgpPacket::Keepalive).parse(input),
         _ => Err(nom::Err::Error(make_error(input, ErrorKind::Eof))),
     }
 }
