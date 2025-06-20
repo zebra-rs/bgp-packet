@@ -39,14 +39,14 @@ pub struct As2Path {
 
 impl ParseBe<As2Path> for As2Path {
     fn parse_be(input: &[u8]) -> IResult<&[u8], As2Path> {
-        let (input, segs) = many0(parse_bgp_attr_as2_segment)(input)?;
+        let (input, segs) = many0(parse_bgp_attr_as2_segment).parse(input)?;
         Ok((input, As2Path { segs }))
     }
 }
 
 fn parse_bgp_attr_as2_segment(input: &[u8]) -> IResult<&[u8], As2Segment> {
-    let (input, header) = AsSegmentHeader::parse(input)?;
-    let (input, asns) = count(be_u16, header.length as usize)(input)?;
+    let (input, header) = AsSegmentHeader::parse_be(input)?;
+    let (input, asns) = count(be_u16, header.length as usize).parse(input)?;
     let segment = As2Segment {
         typ: header.typ,
         asn: asns.into_iter().collect(),
@@ -55,8 +55,8 @@ fn parse_bgp_attr_as2_segment(input: &[u8]) -> IResult<&[u8], As2Segment> {
 }
 
 fn parse_bgp_attr_as4_segment(input: &[u8]) -> IResult<&[u8], As4Segment> {
-    let (input, header) = AsSegmentHeader::parse(input)?;
-    let (input, asns) = count(be_u32, header.length as usize)(input)?;
+    let (input, header) = AsSegmentHeader::parse_be(input)?;
+    let (input, asns) = count(be_u32, header.length as usize).parse(input)?;
     let segment = As4Segment {
         typ: header.typ,
         asn: asns.into_iter().collect(),
@@ -138,7 +138,7 @@ impl AttrEmitter for As4Path {
 
 impl ParseBe<As4Path> for As4Path {
     fn parse_be(input: &[u8]) -> IResult<&[u8], As4Path> {
-        let (input, segs) = many0(parse_bgp_attr_as4_segment)(input)?;
+        let (input, segs) = many0(parse_bgp_attr_as4_segment).parse(input)?;
         Ok((input, As4Path { segs: segs.into() }))
     }
 }

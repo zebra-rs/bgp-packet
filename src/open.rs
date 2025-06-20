@@ -49,7 +49,7 @@ impl OpenPacket {
     pub fn parse_packet(input: &[u8]) -> IResult<&[u8], OpenPacket> {
         let (input, mut packet) = OpenPacket::parse_be(input)?;
         let (input, len) = if packet.opt_param_len == 255 {
-            let (input, ext) = OpenExtended::parse(input)?;
+            let (input, ext) = OpenExtended::parse_be(input)?;
             if ext.non_ext_op_type != 255 {
                 return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
             }
@@ -61,7 +61,7 @@ impl OpenPacket {
             return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
         }
         let (opts, input) = input.split_at(len as usize);
-        let (_, caps) = many0(parse_caps)(opts)?;
+        let (_, caps) = many0(parse_caps).parse(opts)?;
         for mut cap in caps.into_iter() {
             packet.caps.append(&mut cap);
         }
@@ -70,8 +70,8 @@ impl OpenPacket {
 }
 
 fn parse_caps(input: &[u8]) -> IResult<&[u8], Vec<CapabilityPacket>> {
-    let (input, header) = CapabilityHeader::parse(input)?;
+    let (input, header) = CapabilityHeader::parse_be(input)?;
     let (opts, input) = input.split_at(header.length as usize);
-    let (_, caps) = many0(CapabilityPacket::parse_cap)(opts)?;
+    let (_, caps) = many0(CapabilityPacket::parse_cap).parse(opts)?;
     Ok((input, caps))
 }

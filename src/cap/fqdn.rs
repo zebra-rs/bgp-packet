@@ -41,10 +41,10 @@ impl Emit for CapabilityFqdn {
 impl CapabilityFqdn {
     pub fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
         let (input, hostname_len) = be_u8(input)?;
-        let (input, hostname) = take(hostname_len)(input)?;
+        let (input, hostname) = take(hostname_len).parse(input)?;
         let hostname = hostname.to_vec();
         let (input, domain_len) = be_u8(input)?;
-        let (input, domain) = take(domain_len)(input)?;
+        let (input, domain) = take(domain_len).parse(input)?;
         let domain = domain.to_vec();
 
         let fqdn = Self { hostname, domain };
