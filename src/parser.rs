@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::fmt::Display;
 
 use super::attr::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
@@ -162,6 +163,15 @@ impl Attr {
     }
 }
 
+impl Display for Attr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Attr::Origin(v) => write!(f, "{}", v),
+            _ => write!(f, "Attr"),
+        }
+    }
+}
+
 fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
     // Parse the attribute flags and type code
     let (input, flags_byte) = be_u8(input)?;
@@ -317,7 +327,9 @@ pub fn parse_bgp_packet(input: &[u8], as4: bool) -> IResult<&[u8], BgpPacket> {
             let (input, p) = parse_bgp_update_packet(input, as4)?;
             Ok((input, BgpPacket::Update(p)))
         }
-        BgpType::Notification => map(parse_bgp_notification_packet, BgpPacket::Notification).parse(input),
+        BgpType::Notification => {
+            map(parse_bgp_notification_packet, BgpPacket::Notification).parse(input)
+        }
         BgpType::Keepalive => map(BgpHeader::parse_be, BgpPacket::Keepalive).parse(input),
         _ => Err(nom::Err::Error(make_error(input, ErrorKind::Eof))),
     }
