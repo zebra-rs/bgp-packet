@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::Attr;
 
 use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
@@ -29,5 +31,15 @@ impl Default for UpdatePacket {
             ipv4_update: Vec::new(),
             ipv4_withdraw: Vec::new(),
         }
+    }
+}
+
+impl Display for UpdatePacket {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Update")?;
+        for attr in self.attrs.iter() {
+            writeln!(f, "{}", attr)?;
+        }
+        Ok(())
     }
 }

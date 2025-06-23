@@ -25,11 +25,13 @@ pub struct MpNlriUnreachHeader {
     pub safi: Safi,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MpNlriReachAttr {
     pub next_hop: Option<Ipv6Addr>,
     pub ipv6_prefix: Vec<Ipv6Net>,
     pub vpnv4_prefix: Vec<Ipv4Net>,
+    pub snpa: u8,
+    pub evpn_prefix: Vec<Evpn>,
 }
 
 #[derive(Clone, Debug)]
@@ -38,11 +40,17 @@ pub struct MpNlriUnreachAttr {
     pub vpnv4_prefix: Vec<Ipv4Net>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Evpn {
     pub route_type: u8,
     pub rd: RouteDistinguisher,
     pub ether_tag: u32,
+}
+
+impl Evpn {
+    pub fn rd(&self) -> &RouteDistinguisher {
+        &self.rd
+    }
 }
 
 //
@@ -106,8 +114,8 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             let (_, updates) = many0(parse_bgp_nlri_vpnv4_prefix).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 next_hop: None,
-                ipv6_prefix: Vec::new(),
                 vpnv4_prefix: updates,
+                ..Default::default()
             };
             return Ok((input, mp_nlri));
         }
@@ -122,25 +130,27 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             let mp_nlri = MpNlriReachAttr {
                 next_hop: Some(nhop),
                 ipv6_prefix: updates,
-                vpnv4_prefix: Vec::new(),
+                ..Default::default()
             };
             return Ok((input, mp_nlri));
         }
         if header.afi == Afi::L2vpn && header.safi == Safi::Evpn {
-            if header.nhop_len != 16 {
+            // Nexthop can be IPv4 or IPv6 address.
+            if header.nhop_len != 4 && header.nhop_len != 16 {
                 return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
             }
             let (input, nhop) = be_u128(input)?;
             let nhop: Ipv6Addr = Ipv6Addr::from(nhop);
-            let (input, _snpa) = be_u8(input)?;
+            let (input, snpa) = be_u8(input)?;
 
             // EVPN
-            let (input, _evpns) = many0(parse_evpn_nlri).parse(input)?;
+            let (input, evpns) = many0(parse_evpn_nlri).parse(input)?;
 
             let mp_nlri = MpNlriReachAttr {
                 next_hop: Some(nhop),
-                ipv6_prefix: Vec::new(),
-                vpnv4_prefix: Vec::new(),
+                evpn_prefix: evpns,
+                snpa,
+                ..Default::default()
             };
             return Ok((input, mp_nlri));
         }
