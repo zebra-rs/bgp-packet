@@ -1,5 +1,9 @@
 use std::convert::TryInto;
+<<<<<<< HEAD
 use std::fmt;
+=======
+use std::fmt::Display;
+>>>>>>> origin/main
 
 use super::attr::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
@@ -181,6 +185,15 @@ impl fmt::Debug for Attr {
             Attr::LargeCom(v) => write!(f, "{:?}", v),
             Attr::Aigp(v) => write!(f, "{:?}", v),
             _ => write!(f, " Unknown"),
+        }
+    }
+}
+
+impl Display for Attr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Attr::Origin(v) => write!(f, "{}", v),
+            _ => write!(f, "Attr"),
         }
     }
 }

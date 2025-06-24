@@ -43,3 +43,13 @@ impl fmt::Debug for UpdatePacket {
         Ok(())
     }
 }
+
+impl fmt::Display for UpdatePacket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Update")?;
+        for attr in self.attrs.iter() {
+            writeln!(f, "{}", attr)?;
+        }
+        Ok(())
+    }
+}

@@ -27,7 +27,7 @@ pub struct MpNlriUnreachHeader {
     pub safi: Safi,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
     pub next_hop: Option<Ipv6Addr>,
@@ -104,6 +104,12 @@ pub struct EvpnMulticast {
     pub rd: RouteDistinguisher,
     pub ether_tag: u32,
     pub updates: Vec<Ipv6Net>,
+}
+
+impl Evpn {
+    pub fn rd(&self) -> &RouteDistinguisher {
+        &self.rd
+    }
 }
 
 pub fn parse_evpn_nlri(input: &[u8]) -> IResult<&[u8], EvpnRoute> {
@@ -198,7 +204,8 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             return Ok((input, mp_nlri));
         }
         if header.afi == Afi::L2vpn && header.safi == Safi::Evpn {
-            if header.nhop_len != 16 {
+            // Nexthop can be IPv4 or IPv6 address.
+            if header.nhop_len != 4 && header.nhop_len != 16 {
                 return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
             }
             let (input, nhop) = be_u128(input)?;
