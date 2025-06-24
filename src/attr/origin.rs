@@ -17,6 +17,15 @@ impl Origin {
     pub fn new(origin: u8) -> Self {
         Self { origin }
     }
+
+    pub fn short_str(&self) -> &'static str {
+        match self.origin {
+            ORIGIN_IGP => "i",
+            ORIGIN_EGP => "e",
+            ORIGIN_INCOMPLETE => "?",
+            _ => "?",
+        }
+    }
 }
 
 impl AttrEmitter for Origin {
@@ -41,25 +50,6 @@ impl fmt::Display for Origin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.origin {
             ORIGIN_IGP => {
-                write!(f, "i")
-            }
-            ORIGIN_EGP => {
-                write!(f, "e")
-            }
-            ORIGIN_INCOMPLETE => {
-                write!(f, "?")
-            }
-            _ => {
-                write!(f, "?")
-            }
-        }
-    }
-}
-
-impl fmt::Debug for Origin {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.origin {
-            ORIGIN_IGP => {
                 write!(f, "IGP")
             }
             ORIGIN_EGP => {
@@ -72,5 +62,11 @@ impl fmt::Debug for Origin {
                 write!(f, "Incomplete")
             }
         }
+    }
+}
+
+impl fmt::Debug for Origin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " Origin: {}", self)
     }
 }

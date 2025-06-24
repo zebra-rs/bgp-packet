@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use serde::Serialize;
@@ -5,7 +7,7 @@ use serde::Serialize;
 use super::{CapabilityCode, Emit};
 use crate::{Afi, Safi};
 
-#[derive(Debug, PartialEq, NomBE, Clone, Eq, Hash, Serialize)]
+#[derive(PartialEq, NomBE, Clone, Eq, Hash, Serialize)]
 pub struct CapMultiProtocol {
     afi: Afi,
     res: u8,
@@ -35,5 +37,11 @@ impl Emit for CapMultiProtocol {
         buf.put_u16(self.afi.into());
         buf.put_u8(0);
         buf.put_u8(self.safi.into());
+    }
+}
+
+impl fmt::Debug for CapMultiProtocol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "MultiProtocol: {} {}", self.afi, self.safi)
     }
 }

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use nom::number::complete::{be_u16, be_u8};
 use nom::IResult;
 use nom_derive::*;
@@ -131,5 +133,32 @@ impl Safi {
         let (input, safi) = be_u8(input)?;
         let safi: Self = safi.into();
         Ok((input, safi))
+    }
+}
+
+impl fmt::Display for Afi {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Afi::Ip => write!(f, "IPv4"),
+            Afi::Ip6 => write!(f, "IPv6"),
+            Afi::L2vpn => write!(f, "L2VPN"),
+            Afi::Unknown(v) => write!(f, "Unknown({})", v),
+        }
+    }
+}
+
+impl fmt::Display for Safi {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Safi::*;
+        match self {
+            Unicast => write!(f, "Unicast"),
+            Multicast => write!(f, "Muulticast"),
+            MplsLabel => write!(f, "MPLS Label"),
+            Encap => write!(f, "Encap"),
+            Evpn => write!(f, "EVPN"),
+            MplsVpn => write!(f, "MPLS VPN"),
+            Flowspec => write!(f, "Flowspec"),
+            Unknown(v) => write!(f, "Unknown({})", v),
+        }
     }
 }

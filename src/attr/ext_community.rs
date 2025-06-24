@@ -12,7 +12,7 @@ use crate::{AttrEmitter, AttrFlags, AttrType};
 
 use super::ext_community_type::ExtCommunityType;
 
-#[derive(Clone, Debug, Default, NomBE)]
+#[derive(Clone, Default, NomBE)]
 pub struct ExtCommunity(pub Vec<ExtCommunityValue>);
 
 #[derive(Clone, Debug, Default, NomBE)]
@@ -43,6 +43,7 @@ fn sub_type_str(sub_type: u8) -> &'static str {
     match sub_type {
         x if x == RouteTarget as u8 => "rt",
         x if x == RouteOrigin as u8 => "soo",
+        x if x == Opaque as u8 => "opaque",
         _ => "unknown",
     }
 }
@@ -55,6 +56,14 @@ impl fmt::Display for ExtCommunityValue {
             let asn = u16::from_be_bytes([self.val[0], self.val[1]]);
             let val = u32::from_be_bytes([self.val[2], self.val[3], self.val[4], self.val[5]]);
             write!(f, "{} {asn}:{val}", sub_type_str(self.low_type))
+        } else if self.high_type == TransOpaque as u8 {
+            let ip = Ipv4Addr::new(self.val[0], self.val[1], self.val[2], self.val[3]);
+            let val = u16::from_be_bytes([self.val[4], self.val[5]]);
+            if val == 8 {
+                write!(f, "{} VXLAN", sub_type_str(self.low_type))
+            } else {
+                write!(f, "{} {ip}:{val}", sub_type_str(self.low_type))
+            }
         } else {
             let ip = Ipv4Addr::new(self.val[0], self.val[1], self.val[2], self.val[3]);
             let val = u16::from_be_bytes([self.val[4], self.val[5]]);
@@ -94,6 +103,12 @@ impl fmt::Display for ExtCommunity {
             .collect::<Vec<String>>()
             .join(" ");
         write!(f, "{v}")
+    }
+}
+
+impl fmt::Debug for ExtCommunity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " ExtCommunity: {}", self)
     }
 }
 

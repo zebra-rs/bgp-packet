@@ -1,6 +1,9 @@
+use std::fmt;
+use std::net::{Ipv4Addr, Ipv6Addr};
+
 use crate::{
-    many0, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix, parse_bgp_nlri_vpnv4_prefix, Afi,
-    ParseBe, RouteDistinguisher, Safi,
+    many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
+    parse_bgp_nlri_vpnv4_prefix, Afi, ParseBe, RouteDistinguisher, Safi,
 };
 use ipnet::{Ipv4Net, Ipv6Net};
 use nom::{
@@ -10,7 +13,6 @@ use nom::{
     IResult,
 };
 use nom_derive::*;
-use std::net::{Ipv4Addr, Ipv6Addr};
 
 #[derive(Clone, Debug, NomBE)]
 pub struct MpNlriReachHeader {
@@ -27,11 +29,11 @@ pub struct MpNlriUnreachHeader {
 
 #[derive(Clone, Debug, Default)]
 pub struct MpNlriReachAttr {
+    pub snpa: u8,
     pub next_hop: Option<Ipv6Addr>,
     pub ipv6_prefix: Vec<Ipv6Net>,
     pub vpnv4_prefix: Vec<Ipv4Net>,
-    pub snpa: u8,
-    pub evpn_prefix: Vec<Evpn>,
+    pub evpn_prefix: Vec<EvpnRoute>,
 }
 
 #[derive(Clone, Debug)]
@@ -41,10 +43,67 @@ pub struct MpNlriUnreachAttr {
 }
 
 #[derive(Debug, Clone)]
+pub enum EvpnRouteType {
+    EthernetAd,    // 1
+    MacIpAdvRoute, // 2
+    IncMulticast,  // 3
+    EthernetSr,    // 4
+    Unknown(u8),
+}
+
+impl From<EvpnRouteType> for u8 {
+    fn from(val: EvpnRouteType) -> u8 {
+        use EvpnRouteType::*;
+        match val {
+            EthernetAd => 1,
+            MacIpAdvRoute => 2,
+            IncMulticast => 3,
+            EthernetSr => 4,
+            Unknown(val) => val,
+        }
+    }
+}
+
+impl From<u8> for EvpnRouteType {
+    fn from(val: u8) -> Self {
+        use EvpnRouteType::*;
+        match val {
+            1 => EthernetAd,
+            2 => MacIpAdvRoute,
+            3 => IncMulticast,
+            4 => EthernetSr,
+            _ => Unknown(val),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Evpn {
-    pub route_type: u8,
+    pub route_type: EvpnRouteType,
     pub rd: RouteDistinguisher,
     pub ether_tag: u32,
+}
+
+#[derive(Debug, Clone)]
+pub enum EvpnRoute {
+    Mac(EvpnMac),
+    Multicast(EvpnMulticast),
+}
+
+#[derive(Debug, Clone)]
+pub struct EvpnMac {
+    pub rd: RouteDistinguisher,
+    pub esi_type: u8,
+    pub ether_tag: u32,
+    pub mac: [u8; 6],
+    pub vni: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct EvpnMulticast {
+    pub rd: RouteDistinguisher,
+    pub ether_tag: u32,
+    pub updates: Vec<Ipv6Net>,
 }
 
 impl Evpn {
@@ -53,47 +112,56 @@ impl Evpn {
     }
 }
 
-//
-pub fn parse_evpn_nlri(input: &[u8]) -> IResult<&[u8], Evpn> {
-    // Following can be multiple.
-    let (input, route_type) = be_u8(input)?;
+pub fn parse_evpn_nlri(input: &[u8]) -> IResult<&[u8], EvpnRoute> {
+    let (input, typ) = be_u8(input)?;
+    let route_type: EvpnRouteType = typ.into();
     let (input, _length) = be_u8(input)?;
 
+    use EvpnRouteType::*;
     match route_type {
-        2 => {
+        MacIpAdvRoute => {
             let (input, rd) = RouteDistinguisher::parse_be(input)?;
 
-            let (input, _esi_type) = be_u8(input)?;
+            let (input, esi_type) = be_u8(input)?;
             let (input, _esi) = take(9usize).parse(input)?;
             let (input, ether_tag) = be_u32(input)?;
 
-            let evpn = Evpn {
-                route_type,
+            let (input, mac_len) = be_u8(input)?;
+            let mac_size = nlri_psize(mac_len);
+            if mac_size != 6 {
+                return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+            }
+            let (input, mac) = take(6usize).parse(input)?;
+            let (input, ip_len) = be_u8(input)?;
+            let ip_size = nlri_psize(ip_len);
+            if ip_size != 0 {
+                // TODO parse IP address.
+            }
+            let (input, vni) = be_u24(input)?;
+
+            let mut evpn = EvpnMac {
                 rd,
+                esi_type,
                 ether_tag,
+                mac: [0u8; 6],
+                vni,
             };
+            evpn.mac.copy_from_slice(mac);
 
-            let (input, _mac_len) = be_u8(input)?;
-            let (input, _mac) = take(6usize).parse(input)?;
-
-            let (input, _ip_len) = be_u8(input)?;
-            // TODO parse IP address.
-            let (input, _vni) = be_u24(input)?;
-            Ok((input, evpn))
+            Ok((input, EvpnRoute::Mac(evpn)))
         }
-        3 => {
+        IncMulticast => {
             let (input, rd) = RouteDistinguisher::parse_be(input)?;
             let (input, ether_tag) = be_u32(input)?;
 
-            let evpn = Evpn {
-                route_type,
+            let (input, updates) = many0(parse_bgp_evpn_prefix).parse(input)?;
+            let evpn = EvpnMulticast {
                 rd,
                 ether_tag,
+                updates,
             };
 
-            let (input, _updates) = many0(parse_bgp_evpn_prefix).parse(input)?;
-
-            Ok((input, evpn))
+            Ok((input, EvpnRoute::Multicast(evpn)))
         }
         _ => Err(nom::Err::Error(make_error(input, ErrorKind::Tag))),
     }
@@ -110,10 +178,10 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             let (input, _rd) = RouteDistinguisher::parse_be(input)?;
             let (input, nhop) = be_u32(input)?;
             let _nhop: Ipv4Addr = Ipv4Addr::from(nhop);
-            let (input, _snpa) = be_u8(input)?;
+            let (input, snpa) = be_u8(input)?;
             let (_, updates) = many0(parse_bgp_nlri_vpnv4_prefix).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
-                next_hop: None,
+                snpa,
                 vpnv4_prefix: updates,
                 ..Default::default()
             };
@@ -125,9 +193,10 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             }
             let (input, nhop) = be_u128(input)?;
             let nhop: Ipv6Addr = Ipv6Addr::from(nhop);
-            let (input, _snpa) = be_u8(input)?;
+            let (input, snpa) = be_u8(input)?;
             let (_, updates) = many0(parse_bgp_nlri_ipv6_prefix).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
+                snpa,
                 next_hop: Some(nhop),
                 ipv6_prefix: updates,
                 ..Default::default()
@@ -147,9 +216,9 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             let (input, evpns) = many0(parse_evpn_nlri).parse(input)?;
 
             let mp_nlri = MpNlriReachAttr {
+                snpa,
                 next_hop: Some(nhop),
                 evpn_prefix: evpns,
-                snpa,
                 ..Default::default()
             };
             return Ok((input, mp_nlri));
@@ -173,5 +242,34 @@ impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
             vpnv4_prefix: Vec::new(),
         };
         Ok((input, mp_nlri))
+    }
+}
+
+impl fmt::Display for MpNlriReachAttr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for evpn in self.evpn_prefix.iter() {
+            match evpn {
+                EvpnRoute::Mac(v) => {
+                    write!(
+                        f,
+                        "\n  RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
+                        v.rd, v.vni, v.mac[0], v.mac[1], v.mac[2], v.mac[3], v.mac[4], v.mac[5],
+                    )?;
+                }
+                EvpnRoute::Multicast(v) => {
+                    write!(f, "\n  RD: {}", v.rd)?;
+                    for update in v.updates.iter() {
+                        write!(f, " {}", update)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for MpNlriReachAttr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " MP Reach:{}", self)
     }
 }

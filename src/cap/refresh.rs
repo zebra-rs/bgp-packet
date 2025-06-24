@@ -1,8 +1,10 @@
+use std::fmt;
+
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};
 
-#[derive(Debug, Default, PartialEq, NomBE, Clone)]
+#[derive(Default, PartialEq, NomBE, Clone)]
 pub struct CapabilityRouteRefresh {}
 
 impl Emit for CapabilityRouteRefresh {
@@ -11,7 +13,7 @@ impl Emit for CapabilityRouteRefresh {
     }
 }
 
-#[derive(Debug, Default, PartialEq, NomBE, Clone)]
+#[derive(Default, PartialEq, NomBE, Clone)]
 pub struct CapabilityRouteRefreshCisco {}
 
 impl Emit for CapabilityRouteRefreshCisco {
@@ -20,11 +22,29 @@ impl Emit for CapabilityRouteRefreshCisco {
     }
 }
 
-#[derive(Debug, Default, PartialEq, NomBE, Clone)]
+#[derive(Default, PartialEq, NomBE, Clone)]
 pub struct CapabilityEnhancedRouteRefresh {}
 
 impl Emit for CapabilityEnhancedRouteRefresh {
     fn code(&self) -> CapabilityCode {
         CapabilityCode::EnhancedRouteRefresh
+    }
+}
+
+impl fmt::Debug for CapabilityRouteRefresh {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "RouteRefresh")
+    }
+}
+
+impl fmt::Debug for CapabilityRouteRefreshCisco {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "RouteRefresh (Cisco)")
+    }
+}
+
+impl fmt::Debug for CapabilityEnhancedRouteRefresh {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Enhanced RouteRefresh")
     }
 }

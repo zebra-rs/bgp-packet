@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt;
 
 use crate::Attr;
 
@@ -6,7 +6,7 @@ use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
 use ipnet::Ipv4Net;
 use nom_derive::*;
 
-#[derive(Debug, NomBE)]
+#[derive(NomBE)]
 pub struct UpdatePacket {
     pub header: BgpHeader,
     #[nom(Ignore)]
@@ -34,8 +34,18 @@ impl Default for UpdatePacket {
     }
 }
 
-impl Display for UpdatePacket {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for UpdatePacket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Update Message:")?;
+        for attr in self.attrs.iter() {
+            write!(f, "\n{:?}", attr)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for UpdatePacket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Update")?;
         for attr in self.attrs.iter() {
             writeln!(f, "{}", attr)?;
