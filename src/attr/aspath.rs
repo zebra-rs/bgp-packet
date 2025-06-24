@@ -113,7 +113,7 @@ impl fmt::Display for As4Segment {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct As4Path {
     pub segs: VecDeque<As4Segment>,
 }
@@ -152,6 +152,12 @@ impl fmt::Display for As4Path {
             .collect::<Vec<String>>()
             .join(" ");
         write!(f, "{v}")
+    }
+}
+
+impl fmt::Debug for As4Path {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " AS Path: {}", self)
     }
 }
 

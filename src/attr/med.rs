@@ -1,9 +1,11 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
-#[derive(Clone, Debug, NomBE)]
+#[derive(Clone, NomBE)]
 pub struct Med {
     pub med: u32,
 }
@@ -29,5 +31,11 @@ impl AttrEmitter for Med {
 
     fn emit(&self, buf: &mut BytesMut) {
         buf.put_u32(self.med);
+    }
+}
+
+impl fmt::Debug for Med {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " Med: {}", self.med)
     }
 }

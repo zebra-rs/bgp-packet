@@ -1,9 +1,11 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
-#[derive(Clone, Debug, NomBE)]
+#[derive(Clone, NomBE)]
 pub struct LocalPref {
     pub local_pref: u32,
 }
@@ -29,5 +31,11 @@ impl AttrEmitter for LocalPref {
 
     fn emit(&self, buf: &mut BytesMut) {
         buf.put_u32(self.local_pref);
+    }
+}
+
+impl fmt::Debug for LocalPref {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " Local Pref: {}", self.local_pref)
     }
 }

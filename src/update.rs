@@ -1,10 +1,12 @@
+use std::fmt;
+
 use crate::Attr;
 
 use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
 use ipnet::Ipv4Net;
 use nom_derive::*;
 
-#[derive(Debug, NomBE)]
+#[derive(NomBE)]
 pub struct UpdatePacket {
     pub header: BgpHeader,
     #[nom(Ignore)]
@@ -29,5 +31,15 @@ impl Default for UpdatePacket {
             ipv4_update: Vec::new(),
             ipv4_withdraw: Vec::new(),
         }
+    }
+}
+
+impl fmt::Debug for UpdatePacket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Update Packet:")?;
+        for attr in self.attrs.iter() {
+            write!(f, "\n{:?}", attr)?;
+        }
+        Ok(())
     }
 }

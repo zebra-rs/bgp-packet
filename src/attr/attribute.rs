@@ -1,3 +1,6 @@
+use std::fmt;
+use std::net::{Ipv4Addr, Ipv6Addr};
+
 use crate::{
     many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
     parse_bgp_nlri_vpnv4_prefix, Afi, ParseBe, RouteDistinguisher, Safi,
@@ -10,7 +13,6 @@ use nom::{
     IResult,
 };
 use nom_derive::*;
-use std::net::{Ipv4Addr, Ipv6Addr};
 
 #[derive(Clone, Debug, NomBE)]
 pub struct MpNlriReachHeader {
@@ -25,7 +27,7 @@ pub struct MpNlriUnreachHeader {
     pub safi: Safi,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
     pub next_hop: Option<Ipv6Addr>,
@@ -147,7 +149,6 @@ pub fn parse_evpn_nlri(input: &[u8]) -> IResult<&[u8], EvpnRoute> {
             let (input, ether_tag) = be_u32(input)?;
 
             let (input, updates) = many0(parse_bgp_evpn_prefix).parse(input)?;
-            println!("XXX Updates {:?}", updates);
             let evpn = EvpnMulticast {
                 rd,
                 ether_tag,
@@ -234,5 +235,31 @@ impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
             vpnv4_prefix: Vec::new(),
         };
         Ok((input, mp_nlri))
+    }
+}
+
+impl fmt::Display for MpNlriReachAttr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for evpn in self.evpn_prefix.iter() {
+            match evpn {
+                EvpnRoute::Mac(v) => {
+                    write!(
+                        f,
+                        "\n  RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
+                        v.rd, v.vni, v.mac[0], v.mac[1], v.mac[2], v.mac[3], v.mac[4], v.mac[5],
+                    )?;
+                }
+                EvpnRoute::Multicast(v) => {
+                    write!(f, "\n  RD: {}", v.rd)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for MpNlriReachAttr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " MP Reach:{}", self)
     }
 }

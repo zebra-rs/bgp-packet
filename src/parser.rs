@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::fmt;
 
 use super::attr::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
@@ -8,12 +9,10 @@ use super::attr::{
 use super::*;
 use bytes::BytesMut;
 use ipnet::{Ipv4Net, Ipv6Net};
-use nom::bytes::streaming::take;
+use nom::bytes::complete::take;
 use nom::combinator::{map, peek};
 use nom::error::{make_error, ErrorKind};
-use nom::number::complete::be_u32;
-//use nom::number::complete::be_u32;
-use nom::number::streaming::{be_u16, be_u8};
+use nom::number::complete::{be_u16, be_u32, be_u8};
 use nom::IResult;
 use nom_derive::*;
 use std::net::{Ipv4Addr, Ipv6Addr};
@@ -95,7 +94,7 @@ impl From<AttrType> for u8 {
 
 struct AttrSelector(AttrType, Option<bool>);
 
-#[derive(Debug, NomBE, Clone)]
+#[derive(NomBE, Clone)]
 #[nom(Selector = "AttrSelector")]
 pub enum Attr {
     #[nom(Selector = "AttrSelector(AttrType::Origin, None)")]
@@ -162,6 +161,30 @@ impl Attr {
     }
 }
 
+impl fmt::Debug for Attr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Attr::Origin(v) => write!(f, "{:?}", v),
+            Attr::As4Path(v) => write!(f, "{:?}", v),
+            Attr::NextHop(v) => write!(f, "{:?}", v),
+            Attr::Med(v) => write!(f, "{:?}", v),
+            Attr::LocalPref(v) => write!(f, "{:?}", v),
+            Attr::AtomicAggregate(v) => write!(f, "{:?}", v),
+            Attr::Aggregator2(v) => write!(f, "{:?}", v),
+            Attr::Aggregator4(v) => write!(f, "{:?}", v),
+            Attr::OriginatorId(v) => write!(f, "{:?}", v),
+            Attr::ClusterList(v) => write!(f, "{:?}", v),
+            Attr::MpReachNlri(v) => write!(f, "{:?}", v),
+            Attr::Community(v) => write!(f, "{:?}", v),
+            Attr::ExtendedCom(v) => write!(f, "{:?}", v),
+            Attr::PmsiTunnel(v) => write!(f, "{:?}", v),
+            Attr::LargeCom(v) => write!(f, "{:?}", v),
+            Attr::Aigp(v) => write!(f, "{:?}", v),
+            _ => write!(f, " Unknown"),
+        }
+    }
+}
+
 fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
     // Parse the attribute flags and type code
     let (input, flags_byte) = be_u8(input)?;
@@ -188,7 +211,6 @@ fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
     let (attr_payload, input) = input.split_at(attr_len as usize);
 
     // Parse the attribute using the appropriate selector (may use as4 option)
-    println!("Attr Type: {:?}", attr_type);
     let (_, attr) = Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt))?;
 
     Ok((input, attr))
@@ -240,7 +262,6 @@ pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
     paddr[..psize].copy_from_slice(&input[..psize]);
     let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv6Net::new(Ipv6Addr::from(paddr), plen).expect("Ipv6Net create error");
-    println!("IPv6 prefix: {}", prefix);
 
     Ok((input, prefix))
 }
@@ -317,7 +338,9 @@ pub fn parse_bgp_packet(input: &[u8], as4: bool) -> IResult<&[u8], BgpPacket> {
             let (input, p) = parse_bgp_update_packet(input, as4)?;
             Ok((input, BgpPacket::Update(p)))
         }
-        BgpType::Notification => map(parse_bgp_notification_packet, BgpPacket::Notification).parse(input),
+        BgpType::Notification => {
+            map(parse_bgp_notification_packet, BgpPacket::Notification).parse(input)
+        }
         BgpType::Keepalive => map(BgpHeader::parse_be, BgpPacket::Keepalive).parse(input),
         _ => Err(nom::Err::Error(make_error(input, ErrorKind::Eof))),
     }

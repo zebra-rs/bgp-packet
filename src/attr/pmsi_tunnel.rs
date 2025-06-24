@@ -1,21 +1,19 @@
+use std::fmt;
+use std::net::Ipv4Addr;
+
 use bytes::{BufMut, BytesMut};
 use nom::number::complete::be_u24;
 use nom_derive::*;
-use std::net::Ipv4Addr;
 
 use crate::{u32_u8_3, AttrEmitter, AttrFlags, AttrType, ParseBe};
 
-#[derive(Clone, NomBE, Debug)]
+#[derive(Clone, NomBE)]
 pub struct PmsiTunnel {
     pub flags: u8,
     pub tunnel_type: u8,
     #[nom(Parse = "be_u24")]
     pub vni: u32,
     pub endpoint: Ipv4Addr,
-}
-
-impl PmsiTunnel {
-    //
 }
 
 impl AttrEmitter for PmsiTunnel {
@@ -39,14 +37,18 @@ impl AttrEmitter for PmsiTunnel {
     }
 }
 
-// impl fmt::Display for PmsiTunnel {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         //
-//     }
-// }
+impl fmt::Display for PmsiTunnel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Flag: {}, Tunnel Type: {}, VNI: {}, Endpoint: {}",
+            self.flags, self.tunnel_type, self.vni, self.endpoint,
+        )
+    }
+}
 
-// impl fmt::Debug for PmsiTunnel {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         //
-//     }
-// }
+impl fmt::Debug for PmsiTunnel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " PMSI Tunnel; {}", self)
+    }
+}
