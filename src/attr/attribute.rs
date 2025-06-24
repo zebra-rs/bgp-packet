@@ -2,15 +2,15 @@ use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
-    parse_bgp_nlri_vpnv4_prefix, Afi, ParseBe, RouteDistinguisher, Safi,
+    Afi, ParseBe, RouteDistinguisher, Safi, many0, nlri_psize, parse_bgp_evpn_prefix,
+    parse_bgp_nlri_ipv6_prefix, parse_bgp_nlri_vpnv4_prefix,
 };
 use ipnet::{Ipv4Net, Ipv6Net};
 use nom::{
-    bytes::complete::take,
-    error::{make_error, ErrorKind},
-    number::complete::{be_u128, be_u24, be_u32, be_u8},
     IResult,
+    bytes::complete::take,
+    error::{ErrorKind, make_error},
+    number::complete::{be_u8, be_u24, be_u32, be_u128},
 };
 use nom_derive::*;
 

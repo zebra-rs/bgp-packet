@@ -32,6 +32,7 @@ nom-derive = { git = "https://github.com/rust-bakery/nom-derive", branch = "mast
 regex = "1.11.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
+thiserror = "1.0"
 
 [dev-dependencies]
 hex-literal = "1.0"

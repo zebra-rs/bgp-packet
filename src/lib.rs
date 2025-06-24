@@ -25,3 +25,6 @@ pub use attr::*;
 
 pub mod parse_be;
 pub use parse_be::*;
+
+pub mod error;
+pub use error::*;

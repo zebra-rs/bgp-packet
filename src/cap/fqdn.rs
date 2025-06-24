@@ -1,7 +1,7 @@
 use bytes::{BufMut, BytesMut};
+use nom::IResult;
 use nom::bytes::complete::take;
 use nom::number::complete::be_u8;
-use nom::IResult;
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};
