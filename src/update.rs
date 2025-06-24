@@ -36,7 +36,7 @@ impl Default for UpdatePacket {
 
 impl fmt::Debug for UpdatePacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Update Packet:")?;
+        write!(f, "Update Message:")?;
         for attr in self.attrs.iter() {
             write!(f, "\n{:?}", attr)?;
         }

@@ -251,6 +251,9 @@ impl fmt::Display for MpNlriReachAttr {
                 }
                 EvpnRoute::Multicast(v) => {
                     write!(f, "\n  RD: {}", v.rd)?;
+                    for update in v.updates.iter() {
+                        write!(f, " {}", update)?;
+                    }
                 }
             }
         }
