@@ -27,7 +27,7 @@ pub struct MpNlriUnreachHeader {
     pub safi: Safi,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
     pub next_hop: Option<Ipv6Addr>,

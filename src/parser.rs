@@ -1,9 +1,6 @@
 use std::convert::TryInto;
-<<<<<<< HEAD
 use std::fmt;
-=======
 use std::fmt::Display;
->>>>>>> origin/main
 
 use super::attr::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
