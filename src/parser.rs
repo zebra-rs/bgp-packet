@@ -2,6 +2,8 @@ use std::convert::TryInto;
 use std::fmt;
 use std::fmt::Display;
 
+use crate::error::BgpParseError;
+
 use super::attr::{
     Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
     ExtCommunity, LargeCommunity, LocalPref, Med, MpNlriReachAttr, NexthopAttr, Origin,
@@ -11,7 +13,7 @@ use super::*;
 use bytes::BytesMut;
 use ipnet::{Ipv4Net, Ipv6Net};
 use nom::bytes::complete::take;
-use nom::combinator::{map, peek};
+use nom::combinator::peek;
 use nom::error::{make_error, ErrorKind};
 use nom::number::complete::{be_u16, be_u32, be_u8};
 use nom::IResult;
@@ -19,7 +21,7 @@ use nom_derive::*;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 #[repr(u8)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AttrType {
     Origin = 1,
     AsPath = 2,
@@ -195,7 +197,7 @@ impl Display for Attr {
     }
 }
 
-fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
+fn parse_bgp_attribute(input: &[u8], as4: bool) -> Result<(&[u8], Attr), BgpParseError> {
     // Parse the attribute flags and type code
     let (input, flags_byte) = be_u8(input)?;
     let flags = AttributeFlags::from_bits(flags_byte).unwrap();
@@ -218,17 +220,40 @@ fn parse_bgp_attribute(input: &[u8], as4: bool) -> IResult<&[u8], Attr> {
     let as4_opt = matches!(attr_type, AttrType::AsPath | AttrType::Aggregator).then_some(as4);
 
     // Split out the payload for this attribute
+    if input.len() < attr_len as usize {
+        return Err(BgpParseError::IncompleteData {
+            needed: attr_len as usize - input.len(),
+        });
+    }
     let (attr_payload, input) = input.split_at(attr_len as usize);
 
-    // Parse the attribute using the appropriate selector (may use as4 option)
-    let (_, attr) = Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt))?;
+    // Parse the attribute using the appropriate selector with error context
+    let (_, attr) =
+        Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt)).map_err(|e| {
+            BgpParseError::AttributeParseError {
+                attr_type,
+                source: Box::new(BgpParseError::from(e)),
+            }
+        })?;
 
     Ok((input, attr))
 }
 
-fn parse_bgp_update_attribute(input: &[u8], length: u16, as4: bool) -> IResult<&[u8], Vec<Attr>> {
+fn parse_bgp_update_attribute(
+    input: &[u8],
+    length: u16,
+    as4: bool,
+) -> Result<(&[u8], Vec<Attr>), BgpParseError> {
     let (attr, input) = input.split_at(length as usize);
-    let (_, attrs) = many0(|i| parse_bgp_attribute(i, as4)).parse(attr)?;
+    let mut remaining = attr;
+    let mut attrs = Vec::new();
+
+    while !remaining.is_empty() {
+        let (new_remaining, attr) = parse_bgp_attribute(remaining, as4)?;
+        attrs.push(attr);
+        remaining = new_remaining;
+    }
+
     Ok((input, attrs))
 }
 
@@ -311,7 +336,10 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
     Ok((input, prefix))
 }
 
-fn parse_bgp_update_packet(input: &[u8], as4: bool) -> IResult<&[u8], UpdatePacket> {
+fn parse_bgp_update_packet(
+    input: &[u8],
+    as4: bool,
+) -> Result<(&[u8], UpdatePacket), BgpParseError> {
     let (input, mut packet) = UpdatePacket::parse_be(input)?;
     let (input, withdraw_len) = be_u16(input)?;
     let (input, mut withdrawal) = parse_bgp_nlri_ipv4(input, withdraw_len)?;
@@ -340,19 +368,28 @@ pub fn peek_bgp_length(input: &[u8]) -> usize {
     }
 }
 
-pub fn parse_bgp_packet(input: &[u8], as4: bool) -> IResult<&[u8], BgpPacket> {
+pub fn parse_bgp_packet(input: &[u8], as4: bool) -> Result<(&[u8], BgpPacket), BgpParseError> {
     let (_, header) = peek(BgpHeader::parse_be).parse(input)?;
     match header.typ {
-        BgpType::Open => map(OpenPacket::parse_packet, BgpPacket::Open).parse(input),
+        BgpType::Open => {
+            let (input, packet) = OpenPacket::parse_packet(input)?;
+            Ok((input, BgpPacket::Open(packet)))
+        }
         BgpType::Update => {
             let (input, p) = parse_bgp_update_packet(input, as4)?;
             Ok((input, BgpPacket::Update(p)))
         }
         BgpType::Notification => {
-            map(parse_bgp_notification_packet, BgpPacket::Notification).parse(input)
+            let (input, packet) = parse_bgp_notification_packet(input)?;
+            Ok((input, BgpPacket::Notification(packet)))
         }
-        BgpType::Keepalive => map(BgpHeader::parse_be, BgpPacket::Keepalive).parse(input),
-        _ => Err(nom::Err::Error(make_error(input, ErrorKind::Eof))),
+        BgpType::Keepalive => {
+            let (input, header) = BgpHeader::parse_be(input)?;
+            Ok((input, BgpPacket::Keepalive(header)))
+        }
+        _ => Err(BgpParseError::NomError(
+            "Unknown BGP packet type".to_string(),
+        )),
     }
 }
 

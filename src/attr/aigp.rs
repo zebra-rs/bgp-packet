@@ -1,7 +1,7 @@
 use bytes::{BufMut, BytesMut};
 use nom::{
-    error::{make_error, ErrorKind},
-    number::complete::{be_u16, be_u64, be_u8},
+    error::{ErrorKind, make_error},
+    number::complete::{be_u8, be_u16, be_u64},
 };
 use nom_derive::*;
 
