@@ -36,10 +36,11 @@ pub struct MpNlriReachAttr {
     pub evpn_prefix: Vec<EvpnRoute>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct MpNlriUnreachAttr {
     pub ipv6_prefix: Vec<Ipv6Net>,
     pub vpnv4_prefix: Vec<Ipv4Net>,
+    pub evpn_prefix: Vec<EvpnRoute>,
 }
 
 #[derive(Debug, Clone)]
@@ -233,15 +234,25 @@ impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
             return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
         }
         let (input, header) = MpNlriUnreachHeader::parse_be(input)?;
-        if header.afi != Afi::Ip6 || header.safi != Safi::Unicast {
-            return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+        if header.afi == Afi::Ip6 && header.safi == Safi::Unicast {
+            let (_, withdrawal) = many0(parse_bgp_nlri_ipv6_prefix).parse(input)?;
+            let mp_nlri = MpNlriUnreachAttr {
+                ipv6_prefix: withdrawal,
+                ..Default::default()
+            };
+            return Ok((input, mp_nlri));
         }
-        let (_, withdrawal) = many0(parse_bgp_nlri_ipv6_prefix).parse(input)?;
-        let mp_nlri = MpNlriUnreachAttr {
-            ipv6_prefix: withdrawal,
-            vpnv4_prefix: Vec::new(),
-        };
-        Ok((input, mp_nlri))
+        if header.afi == Afi::L2vpn && header.safi == Safi::Evpn {
+            let (input, evpns) = many0(parse_evpn_nlri).parse(input)?;
+            println!("evpns {:?}", evpns);
+            let mp_nlri = MpNlriUnreachAttr {
+                evpn_prefix: evpns,
+                ..Default::default()
+            };
+            return Ok((input, mp_nlri));
+        }
+        println!("XXX AFI {} SAFI {}", header.afi, header.safi);
+        Err(nom::Err::Error(make_error(input, ErrorKind::Tag)))
     }
 }
 

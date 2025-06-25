@@ -4,13 +4,17 @@ use hex_literal::hex;
 fn parse(buf: &[u8]) {
     // Parse with AS4 = truue.
     let packet = parse_bgp_packet(buf, true);
-    match packet {
-        Ok(_) => {
-            println!("parse success");
+    assert!(packet.is_ok());
+
+    let (_, packet) = packet.unwrap();
+    if let BgpPacket::Update(update) = packet {
+        for attr in update.attrs.iter() {
+            if let Attr::MpUnreachNlri(unreach) = attr {
+                assert!(unreach.evpn_prefix.len() == 1);
+            }
         }
-        Err(err) => {
-            println!("parse error {}", err);
-        }
+    } else {
+        panic!("Packet must be Update");
     }
 }
 
