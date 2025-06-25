@@ -178,6 +178,7 @@ impl fmt::Debug for Attr {
             Attr::OriginatorId(v) => write!(f, "{:?}", v),
             Attr::ClusterList(v) => write!(f, "{:?}", v),
             Attr::MpReachNlri(v) => write!(f, "{:?}", v),
+            Attr::MpUnreachNlri(v) => write!(f, "{:?}", v),
             Attr::Community(v) => write!(f, "{:?}", v),
             Attr::ExtendedCom(v) => write!(f, "{:?}", v),
             Attr::PmsiTunnel(v) => write!(f, "{:?}", v),
