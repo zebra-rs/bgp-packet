@@ -56,6 +56,8 @@ impl CapabilityFqdn {
 
 impl fmt::Display for CapabilityFqdn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "FQDN: {:?} {:?}", self.hostname, self.domain)
+        let hostname = String::from_utf8_lossy(&self.hostname);
+        let domain = String::from_utf8_lossy(&self.domain);
+        write!(f, "FQDN: {} {}", hostname, domain)
     }
 }

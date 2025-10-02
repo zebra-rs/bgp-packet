@@ -1,6 +1,7 @@
 use std::fmt;
 
 use bytes::{BufMut, BytesMut};
+use nom::{number::complete::be_u8, IResult};
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};
@@ -10,13 +11,59 @@ use crate::{Afi, Safi};
 pub struct AddPathValue {
     afi: Afi,
     safi: Safi,
-    send_receive: u8,
+    send_receive: AddPathSendReceive,
 }
 
+#[repr(u8)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub enum AddPathSendReceive {
-    Receive,
-    Send,
-    SendReceive,
+    Receive = 1,
+    Send = 2,
+    SendReceive = 3,
+    Unknown(u8),
+}
+
+impl From<AddPathSendReceive> for u8 {
+    fn from(typ: AddPathSendReceive) -> Self {
+        use AddPathSendReceive::*;
+        match typ {
+            Receive => 1,
+            Send => 2,
+            SendReceive => 3,
+            Unknown(v) => v,
+        }
+    }
+}
+
+impl From<u8> for AddPathSendReceive {
+    fn from(typ: u8) -> Self {
+        use AddPathSendReceive::*;
+        match typ {
+            1 => Receive,
+            2 => Send,
+            3 => SendReceive,
+            v => Unknown(v),
+        }
+    }
+}
+
+impl AddPathSendReceive {
+    pub fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
+        let (input, val) = be_u8(input)?;
+        let send_receive: Self = val.into();
+        Ok((input, send_receive))
+    }
+}
+
+impl fmt::Display for AddPathSendReceive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Receive => "Receive",
+            Self::Send => "Send",
+            Self::SendReceive => "SendReceive",
+            Self::Unknown(_) => "Unknown",
+        })
+    }
 }
 
 #[derive(Debug, PartialEq, NomBE, Clone)]
@@ -30,7 +77,7 @@ impl CapabilityAddPath {
             values: vec![AddPathValue {
                 afi,
                 safi,
-                send_receive,
+                send_receive: send_receive.into(),
             }],
         }
     }
@@ -49,7 +96,7 @@ impl Emit for CapabilityAddPath {
         for val in self.values.iter() {
             buf.put_u16(val.afi.into());
             buf.put_u8(val.safi.into());
-            buf.put_u8(val.send_receive);
+            buf.put_u8(val.send_receive.into());
         }
     }
 }

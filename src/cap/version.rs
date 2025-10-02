@@ -34,6 +34,10 @@ impl Emit for CapabilitySoftwareVersion {
 
 impl fmt::Display for CapabilitySoftwareVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Software Version: ")
+        write!(
+            f,
+            "Software Version: {}",
+            String::from_utf8_lossy(&self.version)
+        )
     }
 }

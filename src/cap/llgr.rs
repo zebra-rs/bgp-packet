@@ -1,21 +1,51 @@
 use std::fmt;
 
+use bitfield_struct::bitfield;
 use bytes::{BufMut, BytesMut};
+use nom::number::complete::{be_u24, be_u8};
+use nom::IResult;
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};
-use crate::{Afi, Safi};
+use crate::{Afi, ParseBe, Safi};
+
+pub fn u32_u8_3(value: u32) -> [u8; 3] {
+    // Extract the three least significant bytes as big-endian
+    [
+        (value >> 16) as u8, // Most significant byte of the remaining 3 bytes
+        (value >> 8) as u8,  // Middle byte
+        value as u8,         // Least significant byte
+    ]
+}
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapabilityLlgr {
     pub values: Vec<LLGRValue>,
 }
 
+#[bitfield(u8, debug = true)]
+#[derive(PartialEq)]
+pub struct LLGRFlags {
+    #[bits(7)]
+    pub resvd: u8,
+    #[bits(1)]
+    pub f_bit: bool,
+}
+
+impl ParseBe<LLGRFlags> for LLGRFlags {
+    fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
+        let (input, flags) = be_u8(input)?;
+        Ok((input, flags.into()))
+    }
+}
+
 #[derive(Debug, PartialEq, NomBE, Clone)]
 pub struct LLGRValue {
     afi: Afi,
     safi: Safi,
-    flags_stale_time: u32,
+    flags: LLGRFlags,
+    #[nom(Parse = "be_u24")]
+    stale_time: u32,
 }
 
 impl Emit for CapabilityLlgr {
@@ -31,7 +61,8 @@ impl Emit for CapabilityLlgr {
         for val in self.values.iter() {
             buf.put_u16(val.afi.into());
             buf.put_u8(val.safi.into());
-            buf.put_u32(val.flags_stale_time);
+            buf.put_u8(val.flags.into());
+            buf.put(&u32_u8_3(val.stale_time)[..]);
         }
     }
 }
@@ -45,8 +76,11 @@ impl fmt::Display for CapabilityLlgr {
             }
             let _ = write!(
                 f,
-                "{}/{} flags_stale: {}",
-                value.afi, value.safi, value.flags_stale_time
+                "{}/{} flags: {} stale time: {}",
+                value.afi,
+                value.safi,
+                if value.flags.f_bit() { "F" } else { "" },
+                value.stale_time
             );
         }
         Ok(())
