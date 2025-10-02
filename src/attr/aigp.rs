@@ -1,7 +1,9 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom::{
-    error::{ErrorKind, make_error},
-    number::complete::{be_u8, be_u16, be_u64},
+    error::{make_error, ErrorKind},
+    number::complete::{be_u16, be_u64, be_u8},
 };
 use nom_derive::*;
 
@@ -53,5 +55,11 @@ impl AttrEmitter for Aigp {
         buf.put_u8(1); // Type
         buf.put_u16(11); // Length
         buf.put_u64(self.aigp); // Value
+    }
+}
+
+impl fmt::Display for Aigp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " AIGP:")
     }
 }

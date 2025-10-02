@@ -1,6 +1,5 @@
 use std::convert::TryInto;
 use std::fmt;
-use std::fmt::Display;
 
 use crate::error::BgpParseError;
 
@@ -12,11 +11,11 @@ use super::attr::{
 use super::*;
 use bytes::BytesMut;
 use ipnet::{Ipv4Net, Ipv6Net};
-use nom::IResult;
 use nom::bytes::complete::take;
 use nom::combinator::peek;
-use nom::error::{ErrorKind, make_error};
-use nom::number::complete::{be_u8, be_u16, be_u32};
+use nom::error::{make_error, ErrorKind};
+use nom::number::complete::{be_u16, be_u32, be_u8};
+use nom::IResult;
 use nom_derive::*;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
@@ -97,7 +96,7 @@ impl From<AttrType> for u8 {
 
 struct AttrSelector(AttrType, Option<bool>);
 
-#[derive(NomBE, Clone)]
+#[derive(NomBE, Clone, Debug)]
 #[nom(Selector = "AttrSelector")]
 pub enum Attr {
     #[nom(Selector = "AttrSelector(AttrType::Origin, None)")]
@@ -164,36 +163,27 @@ impl Attr {
     }
 }
 
-impl fmt::Debug for Attr {
+impl fmt::Display for Attr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Attr::Origin(v) => write!(f, "{:?}", v),
-            Attr::As4Path(v) => write!(f, "{:?}", v),
-            Attr::NextHop(v) => write!(f, "{:?}", v),
-            Attr::Med(v) => write!(f, "{:?}", v),
-            Attr::LocalPref(v) => write!(f, "{:?}", v),
-            Attr::AtomicAggregate(v) => write!(f, "{:?}", v),
-            Attr::Aggregator2(v) => write!(f, "{:?}", v),
-            Attr::Aggregator4(v) => write!(f, "{:?}", v),
-            Attr::OriginatorId(v) => write!(f, "{:?}", v),
-            Attr::ClusterList(v) => write!(f, "{:?}", v),
-            Attr::MpReachNlri(v) => write!(f, "{:?}", v),
-            Attr::MpUnreachNlri(v) => write!(f, "{:?}", v),
-            Attr::Community(v) => write!(f, "{:?}", v),
-            Attr::ExtendedCom(v) => write!(f, "{:?}", v),
-            Attr::PmsiTunnel(v) => write!(f, "{:?}", v),
-            Attr::LargeCom(v) => write!(f, "{:?}", v),
-            Attr::Aigp(v) => write!(f, "{:?}", v),
-            _ => write!(f, " Unknown"),
-        }
-    }
-}
-
-impl Display for Attr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
             Attr::Origin(v) => write!(f, "{}", v),
-            _ => write!(f, "Attr"),
+            Attr::As4Path(v) => write!(f, "{}", v),
+            Attr::NextHop(v) => write!(f, "{}", v),
+            Attr::Med(v) => write!(f, "{}", v),
+            Attr::LocalPref(v) => write!(f, "{}", v),
+            Attr::AtomicAggregate(v) => write!(f, "{}", v),
+            Attr::Aggregator2(v) => write!(f, "{}", v),
+            Attr::Aggregator4(v) => write!(f, "{}", v),
+            Attr::OriginatorId(v) => write!(f, "{}", v),
+            Attr::ClusterList(v) => write!(f, "{}", v),
+            Attr::MpReachNlri(v) => write!(f, "{}", v),
+            Attr::MpUnreachNlri(v) => write!(f, "{}", v),
+            Attr::Community(v) => write!(f, "{}", v),
+            Attr::ExtendedCom(v) => write!(f, "{}", v),
+            Attr::PmsiTunnel(v) => write!(f, "{}", v),
+            Attr::LargeCom(v) => write!(f, "{}", v),
+            Attr::Aigp(v) => write!(f, "{}", v),
+            _ => write!(f, "Unknown"),
         }
     }
 }

@@ -2,11 +2,11 @@ use std::fmt;
 
 use crate::Attr;
 
-use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
+use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
 use ipnet::Ipv4Net;
 use nom_derive::*;
 
-#[derive(NomBE)]
+#[derive(Debug, NomBE)]
 pub struct UpdatePacket {
     pub header: BgpHeader,
     #[nom(Ignore)]
@@ -34,21 +34,27 @@ impl Default for UpdatePacket {
     }
 }
 
-impl fmt::Debug for UpdatePacket {
+impl fmt::Display for UpdatePacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Update Message:")?;
         for attr in self.attrs.iter() {
-            write!(f, "\n{:?}", attr)?;
+            write!(f, "\n {}", attr)?;
         }
-        Ok(())
-    }
-}
-
-impl fmt::Display for UpdatePacket {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Update")?;
-        for attr in self.attrs.iter() {
-            writeln!(f, "{}", attr)?;
+        write!(f, "\n IPv4 Updates:")?;
+        if self.ipv4_update.is_empty() {
+            write!(f, " None")?;
+        } else {
+            for update in self.ipv4_update.iter() {
+                write!(f, "\n  {}", update)?;
+            }
+        }
+        write!(f, "\n IPv4 Withdraw:")?;
+        if self.ipv4_withdraw.is_empty() {
+            write!(f, " None")?;
+        } else {
+            for withdraw in self.ipv4_withdraw.iter() {
+                write!(f, "\n  {}", withdraw)?;
+            }
         }
         Ok(())
     }

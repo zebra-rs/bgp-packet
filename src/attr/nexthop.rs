@@ -6,7 +6,7 @@ use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
 
-#[derive(Clone, NomBE)]
+#[derive(Clone, NomBE, Debug)]
 pub struct NexthopAttr {
     pub next_hop: Ipv4Addr,
 }
@@ -29,8 +29,8 @@ impl AttrEmitter for NexthopAttr {
     }
 }
 
-impl fmt::Debug for NexthopAttr {
+impl fmt::Display for NexthopAttr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " Nexthop: {}", self.next_hop)
+        write!(f, "Nexthop: {}", self.next_hop)
     }
 }

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
@@ -42,5 +44,11 @@ impl AttrEmitter for ClusterList {
         for cluster_id in &self.list {
             buf.put(&cluster_id.id[..]);
         }
+    }
+}
+
+impl fmt::Display for ClusterList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " Cluster List:")
     }
 }

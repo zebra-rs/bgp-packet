@@ -8,7 +8,7 @@ pub const ORIGIN_IGP: u8 = 0;
 pub const ORIGIN_EGP: u8 = 1;
 pub const ORIGIN_INCOMPLETE: u8 = 2;
 
-#[derive(Clone, NomBE)]
+#[derive(Debug, Clone, NomBE)]
 pub struct Origin {
     pub origin: u8,
 }
@@ -50,23 +50,17 @@ impl fmt::Display for Origin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.origin {
             ORIGIN_IGP => {
-                write!(f, "IGP")
+                write!(f, "Origin: IGP")
             }
             ORIGIN_EGP => {
-                write!(f, "EGP")
+                write!(f, "Origin: EGP")
             }
             ORIGIN_INCOMPLETE => {
-                write!(f, "Incomplete")
+                write!(f, "Origin: Incomplete")
             }
             _ => {
                 write!(f, "Incomplete")
             }
         }
-    }
-}
-
-impl fmt::Debug for Origin {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " Origin: {}", self)
     }
 }

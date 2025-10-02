@@ -2,15 +2,15 @@ use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    Afi, ParseBe, RouteDistinguisher, Safi, many0, nlri_psize, parse_bgp_evpn_prefix,
-    parse_bgp_nlri_ipv6_prefix, parse_bgp_nlri_vpnv4_prefix,
+    many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
+    parse_bgp_nlri_vpnv4_prefix, Afi, ParseBe, RouteDistinguisher, Safi,
 };
 use ipnet::{Ipv4Net, Ipv6Net};
 use nom::{
-    IResult,
     bytes::complete::take,
-    error::{ErrorKind, make_error},
-    number::complete::{be_u8, be_u24, be_u32, be_u128},
+    error::{make_error, ErrorKind},
+    number::complete::{be_u128, be_u24, be_u32, be_u8},
+    IResult,
 };
 use nom_derive::*;
 
@@ -27,7 +27,7 @@ pub struct MpNlriUnreachHeader {
     pub safi: Safi,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
     pub next_hop: Option<Ipv6Addr>,
@@ -36,7 +36,7 @@ pub struct MpNlriReachAttr {
     pub evpn_prefix: Vec<EvpnRoute>,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MpNlriUnreachAttr {
     pub ipv6_prefix: Vec<Ipv6Net>,
     pub vpnv4_prefix: Vec<Ipv4Net>,
@@ -279,8 +279,25 @@ impl fmt::Display for MpNlriReachAttr {
     }
 }
 
-impl fmt::Debug for MpNlriReachAttr {
+impl fmt::Display for MpNlriUnreachAttr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " MP Reach:{}", self)
+        for evpn in self.evpn_prefix.iter() {
+            match evpn {
+                EvpnRoute::Mac(v) => {
+                    write!(
+                        f,
+                        "\n  RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
+                        v.rd, v.vni, v.mac[0], v.mac[1], v.mac[2], v.mac[3], v.mac[4], v.mac[5],
+                    )?;
+                }
+                EvpnRoute::Multicast(v) => {
+                    write!(f, "\n  RD: {}", v.rd)?;
+                    for update in v.updates.iter() {
+                        write!(f, " {}", update)?;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }

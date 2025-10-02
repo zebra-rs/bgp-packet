@@ -1,15 +1,15 @@
 use bytes::{BufMut, BytesMut};
-use nom::IResult;
 use nom::multi::count;
 use nom::number::complete::{be_u16, be_u32};
+use nom::IResult;
 use nom_derive::*;
 use std::collections::VecDeque;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::{AttrType, ParseBe, many0};
+use crate::{many0, AttrType, ParseBe};
 
-use super::aspath_token::{Token, tokenizer};
+use super::aspath_token::{tokenizer, Token};
 use super::{AttrEmitter, AttrFlags};
 
 pub const AS_SET: u8 = 1;
@@ -151,7 +151,7 @@ impl fmt::Display for As4Path {
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
             .join(" ");
-        write!(f, "{v}")
+        write!(f, "AS Path: {v}")
     }
 }
 

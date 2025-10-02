@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use std::net::Ipv4Addr;
@@ -34,5 +36,11 @@ impl AttrEmitter for OriginatorId {
 
     fn emit(&self, buf: &mut BytesMut) {
         buf.put(&self.id[..]);
+    }
+}
+
+impl fmt::Display for OriginatorId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " Originator ID:")
     }
 }

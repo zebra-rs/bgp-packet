@@ -5,7 +5,7 @@ use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
-#[derive(Clone, NomBE)]
+#[derive(Clone, NomBE, Debug)]
 pub struct Med {
     pub med: u32,
 }
@@ -34,8 +34,8 @@ impl AttrEmitter for Med {
     }
 }
 
-impl fmt::Debug for Med {
+impl fmt::Display for Med {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " Med: {}", self.med)
+        write!(f, "Med: {}", self.med)
     }
 }
