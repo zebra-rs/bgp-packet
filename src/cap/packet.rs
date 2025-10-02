@@ -21,7 +21,7 @@ impl CapabilityHeader {
     }
 }
 
-#[derive(PartialEq, Clone, NomBE)]
+#[derive(Debug, PartialEq, Clone, NomBE)]
 #[nom(Selector = "CapabilityCode")]
 pub enum CapabilityPacket {
     #[nom(Selector = "CapabilityCode::MultiProtocol")]
@@ -108,23 +108,23 @@ impl CapabilityPacket {
     }
 }
 
-impl fmt::Debug for CapabilityPacket {
+impl fmt::Display for CapabilityPacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::MultiProtocol(v) => write!(f, "{:?}", v),
-            Self::RouteRefresh(v) => write!(f, "{:?}", v),
-            Self::ExtendedMessage(v) => write!(f, "{:?}", v),
-            Self::GracefulRestart(v) => write!(f, "{:?}", v),
-            Self::As4(v) => write!(f, "{:?}", v),
-            Self::DynamicCapability(v) => write!(f, "{:?}", v),
-            Self::AddPath(v) => write!(f, "{:?}", v),
-            Self::EnhancedRouteRefresh(v) => write!(f, "{:?}", v),
-            Self::Llgr(v) => write!(f, "{:?}", v),
-            Self::Fqdn(v) => write!(f, "{:?}", v),
-            Self::SoftwareVersion(v) => write!(f, "{:?}", v),
-            Self::PathLimit(v) => write!(f, "{:?}", v),
-            Self::RouteRefreshCisco(v) => write!(f, "{:?}", v),
-            Self::Unknown(v) => write!(f, "{:?}", v),
+            Self::MultiProtocol(v) => write!(f, "{}", v),
+            Self::RouteRefresh(v) => write!(f, "{}", v),
+            Self::ExtendedMessage(v) => write!(f, "{}", v),
+            Self::GracefulRestart(v) => write!(f, "{}", v),
+            Self::As4(v) => write!(f, "{}", v),
+            Self::DynamicCapability(v) => write!(f, "{}", v),
+            Self::AddPath(v) => write!(f, "{}", v),
+            Self::EnhancedRouteRefresh(v) => write!(f, "{}", v),
+            Self::Llgr(v) => write!(f, "{}", v),
+            Self::Fqdn(v) => write!(f, "{}", v),
+            Self::SoftwareVersion(v) => write!(f, "{}", v),
+            Self::PathLimit(v) => write!(f, "{}", v),
+            Self::RouteRefreshCisco(v) => write!(f, "{}", v),
+            Self::Unknown(v) => write!(f, "{}", v),
         }
     }
 }

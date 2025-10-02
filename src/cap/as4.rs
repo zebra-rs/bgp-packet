@@ -5,7 +5,7 @@ use nom_derive::*;
 
 use super::{CapabilityCode, Emit};
 
-#[derive(PartialEq, NomBE, Clone)]
+#[derive(Debug, PartialEq, NomBE, Clone)]
 pub struct CapabilityAs4 {
     pub asn: u32,
 }
@@ -30,8 +30,8 @@ impl Emit for CapabilityAs4 {
     }
 }
 
-impl fmt::Debug for CapabilityAs4 {
+impl fmt::Display for CapabilityAs4 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "AS 4octet: {}", self.asn)
+        write!(f, "4 Octet AS: {}", self.asn)
     }
 }

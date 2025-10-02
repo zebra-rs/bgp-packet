@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
@@ -31,5 +33,22 @@ impl Emit for CapabilityLlgr {
             buf.put_u8(val.safi.into());
             buf.put_u32(val.flags_stale_time);
         }
+    }
+}
+
+impl fmt::Display for CapabilityLlgr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _ = write!(f, "LLGR: ");
+        for (i, value) in self.values.iter().enumerate() {
+            if i > 0 {
+                let _ = write!(f, ", ");
+            }
+            let _ = write!(
+                f,
+                "{}/{} flags_stale: {}",
+                value.afi, value.safi, value.flags_stale_time
+            );
+        }
+        Ok(())
     }
 }

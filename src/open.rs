@@ -1,16 +1,16 @@
 use std::fmt;
 use std::net::Ipv4Addr;
 
+use nom::error::{make_error, ErrorKind};
 use nom::IResult;
-use nom::error::{ErrorKind, make_error};
 use nom_derive::*;
 
 use super::cap::{CapabilityHeader, CapabilityPacket};
-use super::{BgpHeader, many0};
+use super::{many0, BgpHeader};
 
 pub const BGP_VERSION: u8 = 4;
 
-#[derive(PartialEq, NomBE)]
+#[derive(Debug, PartialEq, NomBE)]
 pub struct OpenPacket {
     pub header: BgpHeader,
     pub version: u8,
@@ -77,12 +77,12 @@ fn parse_caps(input: &[u8]) -> IResult<&[u8], Vec<CapabilityPacket>> {
     Ok((input, caps))
 }
 
-impl fmt::Debug for OpenPacket {
+impl fmt::Display for OpenPacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Open Message:")?;
         write!(f, "\n Capability")?;
         for cap in self.caps.iter() {
-            write!(f, "\n  {:?}", cap)?;
+            write!(f, "\n  {}", cap)?;
         }
         Ok(())
     }

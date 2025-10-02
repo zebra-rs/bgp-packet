@@ -1,6 +1,8 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
-use nom::IResult;
 use nom::number::complete::{be_u16, be_u32};
+use nom::IResult;
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};
@@ -38,5 +40,11 @@ pub fn parse_restart_time(input: &[u8]) -> IResult<&[u8], u32> {
     } else {
         let (input, val) = be_u32(input)?;
         Ok((input, val))
+    }
+}
+
+impl fmt::Display for CapabilityGracefulRestart {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Graceful Restart: restart time {}", self.restart_time)
     }
 }

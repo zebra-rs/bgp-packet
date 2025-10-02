@@ -1,7 +1,9 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
-use nom::IResult;
 use nom::bytes::complete::take;
 use nom::number::complete::be_u8;
+use nom::IResult;
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};
@@ -49,5 +51,11 @@ impl CapabilityFqdn {
 
         let fqdn = Self { hostname, domain };
         Ok((input, fqdn))
+    }
+}
+
+impl fmt::Display for CapabilityFqdn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FQDN: {:?} {:?}", self.hostname, self.domain)
     }
 }

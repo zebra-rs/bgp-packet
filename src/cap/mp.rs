@@ -7,7 +7,7 @@ use serde::Serialize;
 use super::{CapabilityCode, Emit};
 use crate::{Afi, Safi};
 
-#[derive(PartialEq, NomBE, Clone, Eq, Hash, Serialize)]
+#[derive(Debug, PartialEq, NomBE, Clone, Eq, Hash, Serialize)]
 pub struct CapMultiProtocol {
     afi: Afi,
     res: u8,
@@ -40,7 +40,7 @@ impl Emit for CapMultiProtocol {
     }
 }
 
-impl fmt::Debug for CapMultiProtocol {
+impl fmt::Display for CapMultiProtocol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "MultiProtocol: {} {}", self.afi, self.safi)
     }

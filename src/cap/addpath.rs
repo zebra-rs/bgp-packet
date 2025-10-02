@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
@@ -9,6 +11,12 @@ pub struct AddPathValue {
     afi: Afi,
     safi: Safi,
     send_receive: u8,
+}
+
+pub enum AddPathSendReceive {
+    Receive,
+    Send,
+    SendReceive,
 }
 
 #[derive(Debug, PartialEq, NomBE, Clone)]
@@ -43,5 +51,18 @@ impl Emit for CapabilityAddPath {
             buf.put_u8(val.safi.into());
             buf.put_u8(val.send_receive);
         }
+    }
+}
+
+impl fmt::Display for CapabilityAddPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _ = write!(f, "AddPath: ");
+        for (i, value) in self.values.iter().enumerate() {
+            if i > 0 {
+                let _ = write!(f, ", ");
+            }
+            let _ = write!(f, "{}/{} {}", value.afi, value.safi, value.send_receive);
+        }
+        Ok(())
     }
 }
