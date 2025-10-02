@@ -50,6 +50,8 @@ pub enum CapabilityPacket {
     PathLimit(CapabilityPathLimit),
     #[nom(Selector = "CapabilityCode::RouteRefreshCisco")]
     RouteRefreshCisco(CapabilityRouteRefreshCisco),
+    #[nom(Selector = "CapabilityCode::LlgrOld")]
+    LlgrOld(CapabilityLlgr),
     #[nom(Selector = "_")]
     Unknown(CapabilityUnknown),
 }
@@ -101,6 +103,9 @@ impl CapabilityPacket {
             Self::RouteRefreshCisco(m) => {
                 m.emit(buf, false);
             }
+            Self::LlgrOld(m) => {
+                m.emit(buf, false);
+            }
             Self::Unknown(m) => {
                 m.emit(buf, false);
             }
@@ -124,6 +129,7 @@ impl fmt::Display for CapabilityPacket {
             Self::SoftwareVersion(v) => write!(f, "{}", v),
             Self::PathLimit(v) => write!(f, "{}", v),
             Self::RouteRefreshCisco(v) => write!(f, "{}", v),
+            Self::LlgrOld(v) => write!(f, "{}", v),
             Self::Unknown(v) => write!(f, "{}", v),
         }
     }

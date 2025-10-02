@@ -1,5 +1,5 @@
-use nom::IResult;
 use nom::number::complete::be_u8;
+use nom::IResult;
 use nom_derive::*;
 
 #[repr(u8)]
@@ -21,6 +21,7 @@ pub enum CapabilityCode {
     SoftwareVersion = 75,
     PathLimit = 76,
     RouteRefreshCisco = 128,
+    LlgrOld = 129,
     Unknown(u8),
 }
 
@@ -43,6 +44,7 @@ impl From<CapabilityCode> for u8 {
             SoftwareVersion => 75,
             PathLimit => 76,
             RouteRefreshCisco => 128,
+            LlgrOld => 129,
             Unknown(v) => v,
         }
     }
@@ -67,6 +69,7 @@ impl From<u8> for CapabilityCode {
             75 => SoftwareVersion,
             76 => PathLimit,
             128 => RouteRefreshCisco,
+            129 => LlgrOld,
             v => Unknown(v),
         }
     }
