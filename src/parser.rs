@@ -298,7 +298,20 @@ fn parse_bgp_nlri_ipv4(input: &[u8], length: u16) -> IResult<&[u8], Vec<Ipv4Net>
     Ok((input, prefix))
 }
 
-pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
+#[derive(Debug, Clone)]
+pub struct Vpnv4Net {
+    // label: [u8; 3],
+    pub rd: RouteDistinguisher,
+    pub prefix: Ipv4Net,
+}
+
+impl fmt::Display for Vpnv4Net {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "VPNv4 [{}]:{}", self.rd, self.prefix)
+    }
+}
+
+pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Vpnv4Net> {
     // MPLS Label (3 octets) + RD (8 octets) + IPv4 Prefix (0-4 octets).
     let (input, mut plen) = be_u8(input)?;
     let psize = nlri_psize(plen);
@@ -307,16 +320,14 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
     }
     // MPLS Label.
     let (input, label) = take(3usize).parse(input)?;
-    println!("Label: {:?}", label);
+    println!("XXX Label len {}", label.len());
 
     // RD.
     let (input, rd) = RouteDistinguisher::parse_be(input)?;
-    println!("RD: {}", rd);
 
     // Adjust plen to MPLS Label and Route Distinguisher.
     plen -= 88;
     let psize = nlri_psize(plen);
-    println!("plen {} psize {}", plen, psize);
 
     // IPv4 prefix.
     let mut paddr = [0u8; 4];
@@ -324,7 +335,13 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
     let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net create error");
 
-    Ok((input, prefix))
+    let vpnv4 = Vpnv4Net {
+        // label: label,
+        rd,
+        prefix,
+    };
+
+    Ok((input, vpnv4))
 }
 
 fn parse_bgp_update_packet(

@@ -5,8 +5,8 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 
 use super::{
+    ext_community_token::{tokenizer, Token},
     RouteDistinguisher, RouteDistinguisherType,
-    ext_community_token::{Token, tokenizer},
 };
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
@@ -102,7 +102,7 @@ impl fmt::Display for ExtCommunity {
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
             .join(" ");
-        write!(f, "{v}")
+        write!(f, "ExtCommunity: {v}")
     }
 }
 
