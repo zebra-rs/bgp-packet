@@ -1,29 +1,37 @@
-use bytes::{BufMut, BytesMut};
-use nom_derive::*;
 use std::fmt;
 
-use crate::{AttrEmitter, AttrFlags, AttrType};
+use bytes::{BufMut, BytesMut};
+use nom::number::complete::be_u8;
+use nom::IResult;
+use nom_derive::*;
 
-pub const ORIGIN_IGP: u8 = 0;
-pub const ORIGIN_EGP: u8 = 1;
-pub const ORIGIN_INCOMPLETE: u8 = 2;
+use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
 
-#[derive(Debug, Clone, NomBE)]
-pub struct Origin {
-    pub origin: u8,
+/// BGP route origin types as defined in RFC 4271
+#[repr(u8)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Copy)]
+pub enum Origin {
+    Igp = 0,        // IGP (lowest preference)
+    Egp = 1,        // EGP
+    Incomplete = 2, // Incomplete (highest preference)
+}
+
+impl From<Origin> for u8 {
+    fn from(value: Origin) -> Self {
+        match value {
+            Origin::Igp => 0,
+            Origin::Egp => 1,
+            Origin::Incomplete => 2,
+        }
+    }
 }
 
 impl Origin {
-    pub fn new(origin: u8) -> Self {
-        Self { origin }
-    }
-
     pub fn short_str(&self) -> &'static str {
-        match self.origin {
-            ORIGIN_IGP => "i",
-            ORIGIN_EGP => "e",
-            ORIGIN_INCOMPLETE => "?",
-            _ => "?",
+        match self {
+            Origin::Igp => "i",
+            Origin::Egp => "e",
+            Origin::Incomplete => "?",
         }
     }
 }
@@ -42,24 +50,33 @@ impl AttrEmitter for Origin {
     }
 
     fn emit(&self, buf: &mut BytesMut) {
-        buf.put_u8(self.origin);
+        buf.put_u8((*self).into());
+    }
+}
+
+impl ParseBe<Origin> for Origin {
+    fn parse_be(input: &[u8]) -> IResult<&[u8], Origin> {
+        let (input, val) = be_u8(input)?;
+        let origin = match val {
+            0 => Origin::Igp,
+            1 => Origin::Egp,
+            _ => Origin::Incomplete,
+        };
+        Ok((input, origin))
     }
 }
 
 impl fmt::Display for Origin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.origin {
-            ORIGIN_IGP => {
+        match self {
+            Origin::Igp => {
                 write!(f, "Origin: IGP")
             }
-            ORIGIN_EGP => {
+            Origin::Egp => {
                 write!(f, "Origin: EGP")
             }
-            ORIGIN_INCOMPLETE => {
+            Origin::Incomplete => {
                 write!(f, "Origin: Incomplete")
-            }
-            _ => {
-                write!(f, "Incomplete")
             }
         }
     }
