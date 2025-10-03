@@ -33,15 +33,15 @@ impl From<&[u8]> for Label {
 }
 
 impl Label {
-    pub fn new(label: u32, exp: u8, bos: bool) -> self {
-        label { label, exp, bos }
+    pub fn new(label: u32, exp: u8, bos: bool) -> Self {
+        Label { label, exp, bos }
     }
 
     pub fn to_bytes(&self) -> [u8; 3] {
         let mut bytes = [0u8; 3];
-        bytes[0] = ((self.label >> 12) & 0xff) as u8;
-        bytes[1] = ((self.label >> 4) & 0xff) as u8;
-        bytes[2] = (((self.label & 0x0f) << 4)
+        bytes[0] = ((self.label >> 12) & 0xFF) as u8;
+        bytes[1] = ((self.label >> 4) & 0xFF) as u8;
+        bytes[2] = (((self.label & 0x0F) << 4)
             | ((self.exp as u32 & 0x07) << 1)
             | (self.bos as u32)) as u8;
         bytes
