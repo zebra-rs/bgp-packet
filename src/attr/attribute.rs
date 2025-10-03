@@ -275,6 +275,9 @@ impl fmt::Display for MpNlriReachAttr {
             for vpn in self.vpnv4_prefix.iter() {
                 write!(f, "{}", vpn)?;
             }
+            if let Some(nhop) = &self.vpnv4_nexthop {
+                write!(f, " Nexthop: {}", nhop)?;
+            }
         }
         for evpn in self.evpn_prefix.iter() {
             match evpn {

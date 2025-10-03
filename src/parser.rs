@@ -309,8 +309,8 @@ impl fmt::Display for Vpnv4Net {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "VPNv4 [{}]:{} label: {}",
-            self.rd, self.prefix, self.label.label
+            "VPNv4 [{}]:{} label: {} bos: {}",
+            self.rd, self.prefix, self.label.label, self.label.bos
         )
     }
 }
