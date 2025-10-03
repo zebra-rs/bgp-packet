@@ -307,10 +307,11 @@ pub struct Vpnv4Net {
 
 impl fmt::Display for Vpnv4Net {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let bos = if self.label.bos { "(BoS)" } else { "" };
         write!(
             f,
-            "VPNv4 [{}]:{} label: {} bos: {}",
-            self.rd, self.prefix, self.label.label, self.label.bos
+            "VPNv4 [{}]:{} label: {} {}",
+            self.rd, self.prefix, self.label.label, bos,
         )
     }
 }

@@ -177,7 +177,7 @@ pub struct Vpnv4Nexthop {
 
 impl fmt::Display for Vpnv4Nexthop {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.rd, self.nhop)
+        write!(f, "[{}]:{}", self.rd, self.nhop)
     }
 }
 
