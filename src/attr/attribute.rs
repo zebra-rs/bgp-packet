@@ -30,8 +30,8 @@ pub struct MpNlriUnreachHeader {
 #[derive(Clone, Debug, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
-    pub next_hop: Option<Ipv6Addr>,
     pub ipv6_prefix: Vec<Ipv6Net>,
+    pub ipv6_nexthop: Option<Ipv6Addr>,
     pub vpnv4_prefix: Vec<Vpnv4Net>,
     pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
     pub evpn_prefix: Vec<EvpnRoute>,
@@ -212,8 +212,8 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             let (_, updates) = many0(parse_bgp_nlri_ipv6_prefix).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 snpa,
-                next_hop: Some(nhop),
                 ipv6_prefix: updates,
+                ipv6_nexthop: Some(nhop),
                 ..Default::default()
             };
             return Ok((input, mp_nlri));
@@ -232,7 +232,7 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
 
             let mp_nlri = MpNlriReachAttr {
                 snpa,
-                next_hop: Some(nhop),
+                ipv6_nexthop: Some(nhop),
                 evpn_prefix: evpns,
                 ..Default::default()
             };
