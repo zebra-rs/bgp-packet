@@ -116,7 +116,7 @@ pub enum Attr {
     #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(false))")]
     Aggregator2(Aggregator2),
     #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(true))")]
-    Aggregator4(Aggregator),
+    Aggregator(Aggregator),
     #[nom(Selector = "AttrSelector(AttrType::Community, None)")]
     Community(Community),
     #[nom(Selector = "AttrSelector(AttrType::OriginatorId, None)")]
@@ -146,8 +146,8 @@ impl Attr {
             Attr::Med(v) => v.attr_emit(buf),
             Attr::LocalPref(v) => v.attr_emit(buf),
             Attr::AtomicAggregate(v) => v.attr_emit(buf),
+            Attr::Aggregator(v) => v.attr_emit(buf),
             Attr::Aggregator2(v) => v.attr_emit(buf),
-            Attr::Aggregator4(v) => v.attr_emit(buf),
             Attr::OriginatorId(v) => v.attr_emit(buf),
             Attr::ClusterList(v) => v.attr_emit(buf),
             // Attr::MpReachNlri(v) => v.attr_emit(buf),
@@ -172,8 +172,8 @@ impl fmt::Display for Attr {
             Attr::Med(v) => write!(f, "{}", v),
             Attr::LocalPref(v) => write!(f, "{}", v),
             Attr::AtomicAggregate(v) => write!(f, "{}", v),
+            Attr::Aggregator(v) => write!(f, "{}", v),
             Attr::Aggregator2(v) => write!(f, "{}", v),
-            Attr::Aggregator4(v) => write!(f, "{}", v),
             Attr::OriginatorId(v) => write!(f, "{}", v),
             Attr::ClusterList(v) => write!(f, "{}", v),
             Attr::MpReachNlri(v) => write!(f, "{}", v),
