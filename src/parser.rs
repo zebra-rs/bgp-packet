@@ -4,7 +4,7 @@ use std::fmt;
 use crate::error::BgpParseError;
 
 use super::attr::{
-    Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
+    Aggregator, Aggregator2, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
     ExtCommunity, LargeCommunity, LocalPref, Med, MpNlriReachAttr, NexthopAttr, Origin,
     RouteDistinguisher,
 };
@@ -116,7 +116,7 @@ pub enum Attr {
     #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(false))")]
     Aggregator2(Aggregator2),
     #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(true))")]
-    Aggregator4(Aggregator4),
+    Aggregator4(Aggregator),
     #[nom(Selector = "AttrSelector(AttrType::Community, None)")]
     Community(Community),
     #[nom(Selector = "AttrSelector(AttrType::OriginatorId, None)")]
