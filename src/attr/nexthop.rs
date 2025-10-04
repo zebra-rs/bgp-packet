@@ -8,7 +8,7 @@ use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
 
 #[derive(Clone, NomBE, Debug)]
 pub struct NexthopAttr {
-    pub next_hop: Ipv4Addr,
+    pub nexthop: Ipv4Addr,
 }
 
 impl AttrEmitter for NexthopAttr {
@@ -25,12 +25,12 @@ impl AttrEmitter for NexthopAttr {
     }
 
     fn emit(&self, buf: &mut BytesMut) {
-        buf.put(&self.next_hop.octets()[..]);
+        buf.put(&self.nexthop.octets()[..]);
     }
 }
 
 impl fmt::Display for NexthopAttr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Nexthop: {}", self.next_hop)
+        write!(f, "Nexthop: {}", self.nexthop)
     }
 }
