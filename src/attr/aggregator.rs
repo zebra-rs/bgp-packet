@@ -24,7 +24,7 @@ impl Aggregator2 {
     }
 
     pub fn ip(&self) -> Ipv4Addr {
-        Ipv4Addr::from(self.ip)
+        self.ip
     }
 }
 
@@ -53,7 +53,7 @@ impl Aggregator {
     }
 
     pub fn ip(&self) -> Ipv4Addr {
-        Ipv4Addr::from(self.ip)
+        self.ip
     }
 }
 
