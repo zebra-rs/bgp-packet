@@ -49,6 +49,10 @@ impl AttrEmitter for ClusterList {
 
 impl fmt::Display for ClusterList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " Cluster List:")
+        write!(f, "Cluster List:")?;
+        for list in self.list.iter() {
+            write!(f, " {}", list)?;
+        }
+        Ok(())
     }
 }

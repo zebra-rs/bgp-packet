@@ -14,7 +14,7 @@ use crate::AttrType;
 
 #[derive(Debug, Clone)]
 pub struct Aigp {
-    aigp: u64,
+    pub aigp: u64,
 }
 
 impl ParseBe<Aigp> for Aigp {

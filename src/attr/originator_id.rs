@@ -4,20 +4,20 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use std::net::Ipv4Addr;
 
-use crate::{AttrEmitter, AttrFlags, AttrType};
+use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
 
 #[derive(Clone, NomBE, Debug)]
 pub struct OriginatorId {
-    pub id: [u8; 4],
+    pub id: Ipv4Addr,
 }
 
 impl OriginatorId {
-    pub fn new(id: &Ipv4Addr) -> Self {
-        Self { id: id.octets() }
+    pub fn new(id: Ipv4Addr) -> Self {
+        Self { id }
     }
 
     pub fn id(&self) -> Ipv4Addr {
-        Ipv4Addr::from(self.id)
+        self.id
     }
 }
 
@@ -35,12 +35,12 @@ impl AttrEmitter for OriginatorId {
     }
 
     fn emit(&self, buf: &mut BytesMut) {
-        buf.put(&self.id[..]);
+        buf.put(&self.id.octets()[..]);
     }
 }
 
 impl fmt::Display for OriginatorId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " Originator ID:")
+        write!(f, "Originator ID: {}", self.id)
     }
 }
