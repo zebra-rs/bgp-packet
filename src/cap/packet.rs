@@ -59,7 +59,9 @@ pub enum CapabilityPacket {
 impl CapabilityPacket {
     pub fn parse_cap(input: &[u8]) -> IResult<&[u8], CapabilityPacket> {
         let (input, cap_header) = CapabilityHeader::parse_be(input)?;
-        CapabilityPacket::parse_be(input, cap_header.code.into())
+        let (cap, input) = input.split_at(cap_header.length as usize);
+        let (_, cap) = CapabilityPacket::parse_be(cap, cap_header.code.into())?;
+        Ok((input, cap))
     }
 
     pub fn encode(&self, buf: &mut BytesMut) {

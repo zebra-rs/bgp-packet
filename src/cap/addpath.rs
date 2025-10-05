@@ -108,7 +108,7 @@ impl fmt::Display for CapabilityAddPath {
             if i > 0 {
                 let _ = write!(f, ", ");
             }
-            let _ = write!(f, "{}/{} {}", value.afi, value.safi, value.send_receive);
+            let _ = write!(f, "{}/{}: {}", value.afi, value.safi, value.send_receive);
         }
         Ok(())
     }

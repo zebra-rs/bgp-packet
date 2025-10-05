@@ -25,6 +25,7 @@ pub enum Safi {
     Encap = 7,
     Evpn = 70,
     MplsVpn = 128,
+    Rtc = 132,
     Flowspec = 133,
     Unknown(u8),
 }
@@ -98,6 +99,7 @@ impl From<Safi> for u8 {
             Encap => 7,
             Evpn => 70,
             MplsVpn => 128,
+            Rtc => 132,
             Flowspec => 133,
             Unknown(v) => v,
         }
@@ -114,6 +116,7 @@ impl From<u8> for Safi {
             7 => Encap,
             70 => Evpn,
             128 => MplsVpn,
+            132 => Rtc,
             133 => Flowspec,
             v => Unknown(v),
         }
@@ -157,6 +160,7 @@ impl fmt::Display for Safi {
             Encap => write!(f, "Encap"),
             Evpn => write!(f, "EVPN"),
             MplsVpn => write!(f, "MPLS VPN"),
+            Rtc => write!(f, "RTC"),
             Flowspec => write!(f, "Flowspec"),
             Unknown(v) => write!(f, "Unknown({})", v),
         }
