@@ -1,12 +1,12 @@
 use std::fmt;
 use std::net::Ipv4Addr;
 
-use nom::error::{make_error, ErrorKind};
 use nom::IResult;
+use nom::error::{ErrorKind, make_error};
 use nom_derive::*;
 
 use super::cap::{CapabilityHeader, CapabilityPacket};
-use super::{many0, BgpHeader};
+use super::{BgpHeader, many0};
 
 pub const BGP_VERSION: u8 = 4;
 

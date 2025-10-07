@@ -1,4 +1,5 @@
 use std::fmt;
+use std::str::FromStr;
 
 use bytes::{BufMut, BytesMut};
 use nom::{number::complete::be_u8, IResult};
@@ -7,15 +8,15 @@ use nom_derive::*;
 use super::{CapabilityCode, Emit};
 use crate::{Afi, Safi};
 
-#[derive(Debug, PartialEq, NomBE, Clone)]
+#[derive(Debug, PartialEq, NomBE, Clone, Ord, PartialOrd, Eq)]
 pub struct AddPathValue {
-    afi: Afi,
-    safi: Safi,
-    send_receive: AddPathSendReceive,
+    pub afi: Afi,
+    pub safi: Safi,
+    pub send_receive: AddPathSendReceive,
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Copy, Ord, PartialOrd, Eq)]
 pub enum AddPathSendReceive {
     Receive = 1,
     Send = 2,
@@ -66,7 +67,20 @@ impl fmt::Display for AddPathSendReceive {
     }
 }
 
-#[derive(Debug, PartialEq, NomBE, Clone)]
+impl FromStr for AddPathSendReceive {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "send" => Ok(AddPathSendReceive::Send),
+            "receive" => Ok(AddPathSendReceive::Receive),
+            "send-receive" => Ok(AddPathSendReceive::SendReceive),
+            _ => Err(format!("Invalid AddPathSendReceive value: {}", s)),
+        }
+    }
+}
+
+#[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapabilityAddPath {
     pub values: Vec<AddPathValue>,
 }

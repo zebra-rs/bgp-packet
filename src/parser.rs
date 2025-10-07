@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::fmt;
 
@@ -377,7 +378,38 @@ pub fn peek_bgp_length(input: &[u8]) -> usize {
     }
 }
 
-pub fn parse_bgp_packet(input: &[u8], as4: bool) -> Result<(&[u8], BgpPacket), BgpParseError> {
+#[derive(Default)]
+pub struct Direct {
+    pub recv: bool,
+    pub send: bool,
+}
+
+#[derive(Default)]
+pub struct ParseOption {
+    // AS4
+    as4: Direct,
+    // AddPath
+    add_path: BTreeMap<AfiSafi, Direct>,
+}
+
+impl ParseOption {
+    pub fn is_as4(&self) -> bool {
+        false
+    }
+
+    pub fn is_add_path_recv(&self, afi: Afi, safi: Safi) -> bool {
+        if afi == Afi::Ip && safi == Safi::MplsVpn {
+            return true;
+        }
+        false
+    }
+}
+
+pub fn parse_bgp_packet(
+    input: &[u8],
+    as4: bool,
+    opt: Option<ParseOption>,
+) -> Result<(&[u8], BgpPacket), BgpParseError> {
     let (_, header) = peek(BgpHeader::parse_be).parse(input)?;
     match header.typ {
         BgpType::Open => {

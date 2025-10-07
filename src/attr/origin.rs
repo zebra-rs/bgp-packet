@@ -1,8 +1,8 @@
 use std::fmt;
 
 use bytes::{BufMut, BytesMut};
-use nom::number::complete::be_u8;
 use nom::IResult;
+use nom::number::complete::be_u8;
 use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};

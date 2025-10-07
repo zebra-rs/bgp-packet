@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::Attr;
 
-use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
+use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
 use ipnet::Ipv4Net;
 use nom_derive::*;
 
