@@ -5,7 +5,7 @@ use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
-#[derive(Clone, NomBE)]
+#[derive(Clone, NomBE, Debug)]
 pub struct LocalPref {
     pub local_pref: u32,
 }
@@ -34,8 +34,8 @@ impl AttrEmitter for LocalPref {
     }
 }
 
-impl fmt::Debug for LocalPref {
+impl fmt::Display for LocalPref {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " Local Pref: {}", self.local_pref)
+        write!(f, "Local Pref: {}", self.local_pref)
     }
 }

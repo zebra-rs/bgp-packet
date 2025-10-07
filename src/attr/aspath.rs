@@ -151,7 +151,7 @@ impl fmt::Display for As4Path {
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
             .join(" ");
-        write!(f, "{v}")
+        write!(f, "AS Path: {v}")
     }
 }
 

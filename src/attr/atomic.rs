@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::BytesMut;
 use nom_derive::*;
 
@@ -33,5 +35,11 @@ impl AttrEmitter for AtomicAggregate {
 
     fn emit(&self, _buf: &mut BytesMut) {
         // AtomicAggregate has no data, just presence
+    }
+}
+
+impl fmt::Display for AtomicAggregate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " Atomic Aggregate")
     }
 }

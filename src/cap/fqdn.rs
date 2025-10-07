@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom::IResult;
 use nom::bytes::complete::take;
@@ -49,5 +51,13 @@ impl CapabilityFqdn {
 
         let fqdn = Self { hostname, domain };
         Ok((input, fqdn))
+    }
+}
+
+impl fmt::Display for CapabilityFqdn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let hostname = String::from_utf8_lossy(&self.hostname);
+        let domain = String::from_utf8_lossy(&self.domain);
+        write!(f, "FQDN: {} {}", hostname, domain)
     }
 }

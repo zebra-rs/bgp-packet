@@ -21,7 +21,7 @@ impl CapabilityHeader {
     }
 }
 
-#[derive(PartialEq, Clone, NomBE)]
+#[derive(Debug, PartialEq, Clone, NomBE)]
 #[nom(Selector = "CapabilityCode")]
 pub enum CapabilityPacket {
     #[nom(Selector = "CapabilityCode::MultiProtocol")]
@@ -50,6 +50,8 @@ pub enum CapabilityPacket {
     PathLimit(CapabilityPathLimit),
     #[nom(Selector = "CapabilityCode::RouteRefreshCisco")]
     RouteRefreshCisco(CapabilityRouteRefreshCisco),
+    #[nom(Selector = "CapabilityCode::LlgrOld")]
+    LlgrOld(CapabilityLlgr),
     #[nom(Selector = "_")]
     Unknown(CapabilityUnknown),
 }
@@ -57,7 +59,9 @@ pub enum CapabilityPacket {
 impl CapabilityPacket {
     pub fn parse_cap(input: &[u8]) -> IResult<&[u8], CapabilityPacket> {
         let (input, cap_header) = CapabilityHeader::parse_be(input)?;
-        CapabilityPacket::parse_be(input, cap_header.code.into())
+        let (cap, input) = input.split_at(cap_header.length as usize);
+        let (_, cap) = CapabilityPacket::parse_be(cap, cap_header.code.into())?;
+        Ok((input, cap))
     }
 
     pub fn encode(&self, buf: &mut BytesMut) {
@@ -101,6 +105,9 @@ impl CapabilityPacket {
             Self::RouteRefreshCisco(m) => {
                 m.emit(buf, false);
             }
+            Self::LlgrOld(m) => {
+                m.emit(buf, false);
+            }
             Self::Unknown(m) => {
                 m.emit(buf, false);
             }
@@ -108,23 +115,24 @@ impl CapabilityPacket {
     }
 }
 
-impl fmt::Debug for CapabilityPacket {
+impl fmt::Display for CapabilityPacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::MultiProtocol(v) => write!(f, "{:?}", v),
-            Self::RouteRefresh(v) => write!(f, "{:?}", v),
-            Self::ExtendedMessage(v) => write!(f, "{:?}", v),
-            Self::GracefulRestart(v) => write!(f, "{:?}", v),
-            Self::As4(v) => write!(f, "{:?}", v),
-            Self::DynamicCapability(v) => write!(f, "{:?}", v),
-            Self::AddPath(v) => write!(f, "{:?}", v),
-            Self::EnhancedRouteRefresh(v) => write!(f, "{:?}", v),
-            Self::Llgr(v) => write!(f, "{:?}", v),
-            Self::Fqdn(v) => write!(f, "{:?}", v),
-            Self::SoftwareVersion(v) => write!(f, "{:?}", v),
-            Self::PathLimit(v) => write!(f, "{:?}", v),
-            Self::RouteRefreshCisco(v) => write!(f, "{:?}", v),
-            Self::Unknown(v) => write!(f, "{:?}", v),
+            Self::MultiProtocol(v) => write!(f, "{}", v),
+            Self::RouteRefresh(v) => write!(f, "{}", v),
+            Self::ExtendedMessage(v) => write!(f, "{}", v),
+            Self::GracefulRestart(v) => write!(f, "{}", v),
+            Self::As4(v) => write!(f, "{}", v),
+            Self::DynamicCapability(v) => write!(f, "{}", v),
+            Self::AddPath(v) => write!(f, "{}", v),
+            Self::EnhancedRouteRefresh(v) => write!(f, "{}", v),
+            Self::Llgr(v) => write!(f, "{}", v),
+            Self::Fqdn(v) => write!(f, "{}", v),
+            Self::SoftwareVersion(v) => write!(f, "{}", v),
+            Self::PathLimit(v) => write!(f, "{}", v),
+            Self::RouteRefreshCisco(v) => write!(f, "{}", v),
+            Self::LlgrOld(v) => write!(f, "{}", v),
+            Self::Unknown(v) => write!(f, "{}", v),
         }
     }
 }

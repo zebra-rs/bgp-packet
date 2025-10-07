@@ -1,12 +1,12 @@
 use std::fmt;
 
+use nom::number::complete::{be_u16, be_u8};
 use nom::IResult;
-use nom::number::complete::{be_u8, be_u16};
 use nom_derive::*;
 use serde::Serialize;
 
 #[repr(u16)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Serialize)]
+#[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash, Serialize)]
 pub enum Afi {
     #[default]
     Ip = 1,
@@ -16,7 +16,7 @@ pub enum Afi {
 }
 
 #[repr(u8)]
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash, Serialize)]
+#[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash, Serialize)]
 pub enum Safi {
     #[default]
     Unicast = 1,
@@ -25,6 +25,7 @@ pub enum Safi {
     Encap = 7,
     Evpn = 70,
     MplsVpn = 128,
+    Rtc = 132,
     Flowspec = 133,
     Unknown(u8),
 }
@@ -52,6 +53,12 @@ impl AfiSafis {
 
     pub fn push(&mut self, afi_safi: AfiSafi) {
         self.0.push(afi_safi);
+    }
+
+    pub fn set(&mut self, afi_safi: AfiSafi) {
+        if !self.has(&afi_safi) {
+            self.push(afi_safi);
+        }
     }
 
     pub fn remove(&mut self, afi_safi: &AfiSafi) -> bool {
@@ -98,6 +105,7 @@ impl From<Safi> for u8 {
             Encap => 7,
             Evpn => 70,
             MplsVpn => 128,
+            Rtc => 132,
             Flowspec => 133,
             Unknown(v) => v,
         }
@@ -114,6 +122,7 @@ impl From<u8> for Safi {
             7 => Encap,
             70 => Evpn,
             128 => MplsVpn,
+            132 => Rtc,
             133 => Flowspec,
             v => Unknown(v),
         }
@@ -157,6 +166,7 @@ impl fmt::Display for Safi {
             Encap => write!(f, "Encap"),
             Evpn => write!(f, "EVPN"),
             MplsVpn => write!(f, "MPLS VPN"),
+            Rtc => write!(f, "RTC"),
             Flowspec => write!(f, "Flowspec"),
             Unknown(v) => write!(f, "Unknown({})", v),
         }

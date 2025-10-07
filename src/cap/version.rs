@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
@@ -27,5 +29,15 @@ impl Emit for CapabilitySoftwareVersion {
 
     fn emit_value(&self, buf: &mut BytesMut) {
         buf.put(&self.version[..]);
+    }
+}
+
+impl fmt::Display for CapabilitySoftwareVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Software Version: {}",
+            String::from_utf8_lossy(&self.version)
+        )
     }
 }

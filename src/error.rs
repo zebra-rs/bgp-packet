@@ -25,6 +25,9 @@ pub enum BgpParseError {
 
     #[error("Unknown attribute type: {attr_type}")]
     UnknownAttributeType { attr_type: u8 },
+
+    #[error("Header length is smaller than expected: got {actual}, expected {expected}")]
+    InvalidHeaderLength { expected: usize, actual: usize },
 }
 
 impl From<nom::Err<nom::error::Error<&[u8]>>> for BgpParseError {

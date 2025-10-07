@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom::{
     error::{ErrorKind, make_error},
@@ -12,7 +14,7 @@ use crate::AttrType;
 
 #[derive(Debug, Clone)]
 pub struct Aigp {
-    aigp: u64,
+    pub aigp: u64,
 }
 
 impl ParseBe<Aigp> for Aigp {
@@ -53,5 +55,11 @@ impl AttrEmitter for Aigp {
         buf.put_u8(1); // Type
         buf.put_u16(11); // Length
         buf.put_u64(self.aigp); // Value
+    }
+}
+
+impl fmt::Display for Aigp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " AIGP:")
     }
 }

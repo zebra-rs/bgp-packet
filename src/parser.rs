@@ -1,22 +1,22 @@
+use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::fmt;
-use std::fmt::Display;
 
 use crate::error::BgpParseError;
 
 use super::attr::{
-    Aggregator2, Aggregator4, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
+    Aggregator, Aggregator2, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
     ExtCommunity, LargeCommunity, LocalPref, Med, MpNlriReachAttr, NexthopAttr, Origin,
     RouteDistinguisher,
 };
 use super::*;
 use bytes::BytesMut;
 use ipnet::{Ipv4Net, Ipv6Net};
-use nom::IResult;
 use nom::bytes::complete::take;
 use nom::combinator::peek;
-use nom::error::{ErrorKind, make_error};
-use nom::number::complete::{be_u8, be_u16, be_u32};
+use nom::error::{make_error, ErrorKind};
+use nom::number::complete::{be_u16, be_u32, be_u8};
+use nom::IResult;
 use nom_derive::*;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
@@ -97,7 +97,7 @@ impl From<AttrType> for u8 {
 
 struct AttrSelector(AttrType, Option<bool>);
 
-#[derive(NomBE, Clone)]
+#[derive(NomBE, Clone, Debug)]
 #[nom(Selector = "AttrSelector")]
 pub enum Attr {
     #[nom(Selector = "AttrSelector(AttrType::Origin, None)")]
@@ -117,7 +117,7 @@ pub enum Attr {
     #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(false))")]
     Aggregator2(Aggregator2),
     #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(true))")]
-    Aggregator4(Aggregator4),
+    Aggregator(Aggregator),
     #[nom(Selector = "AttrSelector(AttrType::Community, None)")]
     Community(Community),
     #[nom(Selector = "AttrSelector(AttrType::OriginatorId, None)")]
@@ -147,8 +147,8 @@ impl Attr {
             Attr::Med(v) => v.attr_emit(buf),
             Attr::LocalPref(v) => v.attr_emit(buf),
             Attr::AtomicAggregate(v) => v.attr_emit(buf),
+            Attr::Aggregator(v) => v.attr_emit(buf),
             Attr::Aggregator2(v) => v.attr_emit(buf),
-            Attr::Aggregator4(v) => v.attr_emit(buf),
             Attr::OriginatorId(v) => v.attr_emit(buf),
             Attr::ClusterList(v) => v.attr_emit(buf),
             // Attr::MpReachNlri(v) => v.attr_emit(buf),
@@ -164,36 +164,27 @@ impl Attr {
     }
 }
 
-impl fmt::Debug for Attr {
+impl fmt::Display for Attr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Attr::Origin(v) => write!(f, "{:?}", v),
-            Attr::As4Path(v) => write!(f, "{:?}", v),
-            Attr::NextHop(v) => write!(f, "{:?}", v),
-            Attr::Med(v) => write!(f, "{:?}", v),
-            Attr::LocalPref(v) => write!(f, "{:?}", v),
-            Attr::AtomicAggregate(v) => write!(f, "{:?}", v),
-            Attr::Aggregator2(v) => write!(f, "{:?}", v),
-            Attr::Aggregator4(v) => write!(f, "{:?}", v),
-            Attr::OriginatorId(v) => write!(f, "{:?}", v),
-            Attr::ClusterList(v) => write!(f, "{:?}", v),
-            Attr::MpReachNlri(v) => write!(f, "{:?}", v),
-            Attr::MpUnreachNlri(v) => write!(f, "{:?}", v),
-            Attr::Community(v) => write!(f, "{:?}", v),
-            Attr::ExtendedCom(v) => write!(f, "{:?}", v),
-            Attr::PmsiTunnel(v) => write!(f, "{:?}", v),
-            Attr::LargeCom(v) => write!(f, "{:?}", v),
-            Attr::Aigp(v) => write!(f, "{:?}", v),
-            _ => write!(f, " Unknown"),
-        }
-    }
-}
-
-impl Display for Attr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
             Attr::Origin(v) => write!(f, "{}", v),
-            _ => write!(f, "Attr"),
+            Attr::As4Path(v) => write!(f, "{}", v),
+            Attr::NextHop(v) => write!(f, "{}", v),
+            Attr::Med(v) => write!(f, "{}", v),
+            Attr::LocalPref(v) => write!(f, "{}", v),
+            Attr::AtomicAggregate(v) => write!(f, "{}", v),
+            Attr::Aggregator(v) => write!(f, "{}", v),
+            Attr::Aggregator2(v) => write!(f, "{}", v),
+            Attr::OriginatorId(v) => write!(f, "{}", v),
+            Attr::ClusterList(v) => write!(f, "{}", v),
+            Attr::MpReachNlri(v) => write!(f, "{}", v),
+            Attr::MpUnreachNlri(v) => write!(f, "{}", v),
+            Attr::Community(v) => write!(f, "{}", v),
+            Attr::ExtendedCom(v) => write!(f, "{}", v),
+            Attr::PmsiTunnel(v) => write!(f, "{}", v),
+            Attr::LargeCom(v) => write!(f, "{}", v),
+            Attr::Aigp(v) => write!(f, "{}", v),
+            _ => write!(f, "Unknown"),
         }
     }
 }
@@ -308,7 +299,25 @@ fn parse_bgp_nlri_ipv4(input: &[u8], length: u16) -> IResult<&[u8], Vec<Ipv4Net>
     Ok((input, prefix))
 }
 
-pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
+#[derive(Debug, Clone)]
+pub struct Vpnv4Net {
+    pub label: Label,
+    pub rd: RouteDistinguisher,
+    pub prefix: Ipv4Net,
+}
+
+impl fmt::Display for Vpnv4Net {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let bos = if self.label.bos { "(BoS)" } else { "" };
+        write!(
+            f,
+            "VPNv4 [{}]:{} label: {} {}",
+            self.rd, self.prefix, self.label.label, bos,
+        )
+    }
+}
+
+pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Vpnv4Net> {
     // MPLS Label (3 octets) + RD (8 octets) + IPv4 Prefix (0-4 octets).
     let (input, mut plen) = be_u8(input)?;
     let psize = nlri_psize(plen);
@@ -317,16 +326,14 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
     }
     // MPLS Label.
     let (input, label) = take(3usize).parse(input)?;
-    println!("Label: {:?}", label);
+    let label = Label::from(label);
 
     // RD.
     let (input, rd) = RouteDistinguisher::parse_be(input)?;
-    println!("RD: {}", rd);
 
     // Adjust plen to MPLS Label and Route Distinguisher.
     plen -= 88;
     let psize = nlri_psize(plen);
-    println!("plen {} psize {}", plen, psize);
 
     // IPv4 prefix.
     let mut paddr = [0u8; 4];
@@ -334,7 +341,9 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
     let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net create error");
 
-    Ok((input, prefix))
+    let vpnv4 = Vpnv4Net { label, rd, prefix };
+
+    Ok((input, vpnv4))
 }
 
 fn parse_bgp_update_packet(
@@ -369,7 +378,38 @@ pub fn peek_bgp_length(input: &[u8]) -> usize {
     }
 }
 
-pub fn parse_bgp_packet(input: &[u8], as4: bool) -> Result<(&[u8], BgpPacket), BgpParseError> {
+#[derive(Default)]
+pub struct Direct {
+    pub recv: bool,
+    pub send: bool,
+}
+
+#[derive(Default)]
+pub struct ParseOption {
+    // AS4
+    as4: Direct,
+    // AddPath
+    add_path: BTreeMap<AfiSafi, Direct>,
+}
+
+impl ParseOption {
+    pub fn is_as4(&self) -> bool {
+        false
+    }
+
+    pub fn is_add_path_recv(&self, afi: Afi, safi: Safi) -> bool {
+        if afi == Afi::Ip && safi == Safi::MplsVpn {
+            return true;
+        }
+        false
+    }
+}
+
+pub fn parse_bgp_packet(
+    input: &[u8],
+    as4: bool,
+    opt: Option<ParseOption>,
+) -> Result<(&[u8], BgpPacket), BgpParseError> {
     let (_, header) = peek(BgpHeader::parse_be).parse(input)?;
     match header.typ {
         BgpType::Open => {

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
@@ -29,5 +31,11 @@ impl Emit for CapabilityUnknown {
 
     fn emit_value(&self, buf: &mut BytesMut) {
         buf.put(&self.data[..]);
+    }
+}
+
+impl fmt::Display for CapabilityUnknown {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Unknown: Code {}", self.header.code)
     }
 }

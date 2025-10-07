@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom::IResult;
 use nom::number::complete::{be_u16, be_u32};
@@ -35,8 +37,18 @@ pub fn parse_restart_time(input: &[u8]) -> IResult<&[u8], u32> {
     if input.len() == 2 {
         let (input, val) = be_u16(input)?;
         Ok((input, val as u32))
-    } else {
+    } else if input.len() == 4 {
         let (input, val) = be_u32(input)?;
         Ok((input, val))
+    } else {
+        let (input, val) = be_u16(input)?;
+        let (input, _) = be_u32(input)?;
+        Ok((input, val.into()))
+    }
+}
+
+impl fmt::Display for CapabilityGracefulRestart {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Graceful Restart: restart time {}", self.restart_time)
     }
 }

@@ -102,7 +102,7 @@ impl fmt::Display for ExtCommunity {
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
             .join(" ");
-        write!(f, "{v}")
+        write!(f, "ExtCommunity: {v}")
     }
 }
 

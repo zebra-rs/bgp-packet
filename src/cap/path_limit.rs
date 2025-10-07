@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
@@ -43,5 +45,18 @@ impl Emit for CapabilityPathLimit {
             buf.put_u8(val.safi.into());
             buf.put_u16(val.path_limit);
         }
+    }
+}
+
+impl fmt::Display for CapabilityPathLimit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let _ = write!(f, "Path Limit: ");
+        for (i, value) in self.values.iter().enumerate() {
+            if i > 0 {
+                let _ = write!(f, ", ");
+            }
+            let _ = write!(f, "{}/{} {}", value.afi, value.safi, value.path_limit);
+        }
+        Ok(())
     }
 }

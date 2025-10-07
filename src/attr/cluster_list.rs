@@ -1,11 +1,16 @@
+use std::fmt;
+use std::net::Ipv4Addr;
+
 use bytes::{BufMut, BytesMut};
-use nom_derive::*;
+use nom::IResult;
+use nom::Parser;
+use nom::number::complete::be_u32;
 
-use crate::{AttrEmitter, AttrFlags, AttrType};
+use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe, many0};
 
-#[derive(Clone, NomBE, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ClusterList {
-    pub list: Vec<ClusterId>,
+    pub list: Vec<Ipv4Addr>,
 }
 
 impl ClusterList {
@@ -14,14 +19,11 @@ impl ClusterList {
     }
 }
 
-#[derive(Clone, NomBE, Debug)]
-pub struct ClusterId {
-    pub id: [u8; 4],
-}
-
-impl ClusterId {
-    pub fn encode(&self, buf: &mut BytesMut) {
-        buf.put(&self.id[..]);
+impl ParseBe<ClusterList> for ClusterList {
+    fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
+        let (input, ids) = many0(be_u32).parse(input)?;
+        let list = ids.into_iter().map(Ipv4Addr::from).collect();
+        Ok((input, ClusterList { list }))
     }
 }
 
@@ -40,7 +42,17 @@ impl AttrEmitter for ClusterList {
 
     fn emit(&self, buf: &mut BytesMut) {
         for cluster_id in &self.list {
-            buf.put(&cluster_id.id[..]);
+            buf.put(&cluster_id.octets()[..]);
         }
+    }
+}
+
+impl fmt::Display for ClusterList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Cluster List:")?;
+        for list in self.list.iter() {
+            write!(f, " {}", list)?;
+        }
+        Ok(())
     }
 }
