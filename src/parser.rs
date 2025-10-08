@@ -189,7 +189,11 @@ impl fmt::Display for Attr {
     }
 }
 
-fn parse_bgp_attribute(input: &[u8], as4: bool) -> Result<(&[u8], Attr), BgpParseError> {
+fn parse_bgp_attribute<'a>(
+    input: &'a [u8],
+    as4: bool,
+    opt: &'a Option<ParseOption>,
+) -> Result<(&'a [u8], Attr), BgpParseError> {
     // Parse the attribute flags and type code
     let (input, flags_byte) = be_u8(input)?;
     let flags = AttributeFlags::from_bits(flags_byte).unwrap();
@@ -235,13 +239,14 @@ fn parse_bgp_update_attribute(
     input: &[u8],
     length: u16,
     as4: bool,
+    opt: Option<ParseOption>,
 ) -> Result<(&[u8], Vec<Attr>), BgpParseError> {
     let (attr, input) = input.split_at(length as usize);
     let mut remaining = attr;
     let mut attrs = Vec::new();
 
     while !remaining.is_empty() {
-        let (new_remaining, attr) = parse_bgp_attribute(remaining, as4)?;
+        let (new_remaining, attr) = parse_bgp_attribute(remaining, as4, &opt)?;
         attrs.push(attr);
         remaining = new_remaining;
     }
@@ -373,16 +378,17 @@ fn parse_bgp_update_packet(
     opt: Option<ParseOption>,
 ) -> Result<(&[u8], UpdatePacket), BgpParseError> {
     // AddPath receive.
-    let add_path = match opt {
-        Some(opt) => opt.is_add_path_recv(Afi::Ip, Safi::Unicast),
-        None => false,
+    let add_path = if let Some(o) = opt.as_ref() {
+        o.is_add_path_recv(Afi::Ip, Safi::Unicast)
+    } else {
+        false
     };
     let (input, mut packet) = UpdatePacket::parse_be(input)?;
     let (input, withdraw_len) = be_u16(input)?;
     let (input, mut withdrawal) = parse_bgp_nlri_ipv4(input, withdraw_len, add_path)?;
     packet.ipv4_withdraw.append(&mut withdrawal);
     let (input, attr_len) = be_u16(input)?;
-    let (input, mut attrs) = parse_bgp_update_attribute(input, attr_len, as4)?;
+    let (input, mut attrs) = parse_bgp_update_attribute(input, attr_len, as4, opt)?;
     packet.attrs.append(&mut attrs);
     let nlri_len = packet.header.length - BGP_HEADER_LEN - 2 - withdraw_len - 2 - attr_len;
     let (input, mut updates) = parse_bgp_nlri_ipv4(input, nlri_len, add_path)?;
