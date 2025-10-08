@@ -2,7 +2,7 @@ use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
+    get_parse_context, many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
     parse_bgp_nlri_vpnv4_prefix, Afi, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi,
     Vpnv4Net,
 };
@@ -191,17 +191,15 @@ impl fmt::Display for Vpnv4Nexthop {
 impl MpNlriReachAttr {
     pub fn parse_be_with_opt<'a>(
         input: &'a [u8],
-        opt: &'a Option<ParseOption>,
+        opt: Option<ParseOption>,
     ) -> nom::IResult<&'a [u8], Self> {
         if input.len() < size_of::<MpNlriReachHeader>() {
             return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
         }
         let (input, header) = MpNlriReachHeader::parse_be(input)?;
-        let add_path = if let Some(o) = opt.as_ref() {
-            println!("parse_be_with_opt opt exists");
+        let add_path = if let Some(o) = opt {
             o.is_add_path_recv(header.afi, header.safi)
         } else {
-            println!("parse_be_with_opt opt does not exists");
             false
         };
         if header.afi == Afi::Ip && header.safi == Safi::MplsVpn {
@@ -262,7 +260,7 @@ impl MpNlriReachAttr {
 impl MpNlriUnreachAttr {
     pub fn parse_be_with_opt<'a>(
         input: &'a [u8],
-        opt: &'a Option<ParseOption>,
+        opt: Option<ParseOption>,
     ) -> nom::IResult<&'a [u8], Self> {
         // AFI + SAFI = 3.
         if input.len() < 3 {
@@ -272,7 +270,7 @@ impl MpNlriUnreachAttr {
             )));
         }
         let (input, header) = MpNlriUnreachHeader::parse_be(input)?;
-        let add_path = if let Some(o) = opt.as_ref() {
+        let add_path = if let Some(o) = opt {
             o.is_add_path_recv(header.afi, header.safi)
         } else {
             false
@@ -328,15 +326,18 @@ impl MpNlriUnreachAttr {
     }
 }
 
+// ParseBe implementations that read from thread-local context
 impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
-        Self::parse_be_with_opt(input, &None)
+        let opt = get_parse_context();
+        Self::parse_be_with_opt(input, opt)
     }
 }
 
 impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
-        Self::parse_be_with_opt(input, &None)
+        let opt = get_parse_context();
+        Self::parse_be_with_opt(input, opt)
     }
 }
 

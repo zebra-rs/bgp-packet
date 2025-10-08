@@ -1,7 +1,7 @@
 use std::fmt;
 
-use nom::number::complete::{be_u16, be_u8};
 use nom::IResult;
+use nom::number::complete::{be_u8, be_u16};
 use nom_derive::*;
 use serde::Serialize;
 
@@ -30,7 +30,7 @@ pub enum Safi {
     Unknown(u8),
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash)]
 pub struct AfiSafi {
     pub afi: Afi,
     pub safi: Safi,

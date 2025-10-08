@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::fmt;
@@ -95,52 +96,46 @@ impl From<AttrType> for u8 {
     }
 }
 
-struct AttrSelector<'a>(AttrType, Option<bool>, &'a Option<ParseOption>);
+struct AttrSelector(AttrType, Option<bool>);
 
 #[derive(NomBE, Clone, Debug)]
 #[nom(Selector = "AttrSelector")]
 pub enum Attr {
-    #[nom(Selector = "AttrSelector(AttrType::Origin, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::Origin, None)")]
     Origin(Origin),
-    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(false), _)")]
+    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(false))")]
     As2Path(As2Path),
-    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(true), _)")]
+    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(true))")]
     As4Path(As4Path),
-    #[nom(Selector = "AttrSelector(AttrType::NextHop, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::NextHop, None)")]
     NextHop(NexthopAttr),
-    #[nom(Selector = "AttrSelector(AttrType::Med, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::Med, None)")]
     Med(Med),
-    #[nom(Selector = "AttrSelector(AttrType::LocalPref, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::LocalPref, None)")]
     LocalPref(LocalPref),
-    #[nom(Selector = "AttrSelector(AttrType::AtomicAggregate, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::AtomicAggregate, None)")]
     AtomicAggregate(AtomicAggregate),
-    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(false), _)")]
+    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(false))")]
     Aggregator2(Aggregator2),
-    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(true), _)")]
+    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(true))")]
     Aggregator(Aggregator),
-    #[nom(Selector = "AttrSelector(AttrType::Community, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::Community, None)")]
     Community(Community),
-    #[nom(Selector = "AttrSelector(AttrType::OriginatorId, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::OriginatorId, None)")]
     OriginatorId(OriginatorId),
-    #[nom(Selector = "AttrSelector(AttrType::ClusterList, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::ClusterList, None)")]
     ClusterList(ClusterList),
-    #[nom(
-        Selector = "AttrSelector(AttrType::MpReachNlri, None, opt)",
-        Parse = "MpNlriReachAttr::parse_be_with_opt"
-    )]
+    #[nom(Selector = "AttrSelector(AttrType::MpReachNlri, None)")]
     MpReachNlri(MpNlriReachAttr),
-    #[nom(
-        Selector = "AttrSelector(AttrType::MpUnreachNlri, None, opt)",
-        Parse = "MpNlriUnreachAttr::parse_be_with_opt"
-    )]
+    #[nom(Selector = "AttrSelector(AttrType::MpUnreachNlri, None)")]
     MpUnreachNlri(MpNlriUnreachAttr),
-    #[nom(Selector = "AttrSelector(AttrType::ExtendedCom, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::ExtendedCom, None)")]
     ExtendedCom(ExtCommunity),
-    #[nom(Selector = "AttrSelector(AttrType::PmsiTunnel, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::PmsiTunnel, None)")]
     PmsiTunnel(PmsiTunnel),
-    #[nom(Selector = "AttrSelector(AttrType::Aigp, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::Aigp, None)")]
     Aigp(Aigp),
-    #[nom(Selector = "AttrSelector(AttrType::LargeCom, None, _)")]
+    #[nom(Selector = "AttrSelector(AttrType::LargeCom, None)")]
     LargeCom(LargeCommunity),
 }
 
@@ -200,18 +195,11 @@ fn parse_bgp_attribute<'a>(
     as4: bool,
     opt: &'a Option<ParseOption>,
 ) -> Result<(&'a [u8], Attr), BgpParseError> {
-    if opt.is_some() {
-        println!("parse_bgp_attribute opt exist");
-    } else {
-        println!("parse_bgp_attribute opt does not exist");
-    }
-
     // Parse the attribute flags and type code
     let (input, flags_byte) = be_u8(input)?;
     let flags = AttributeFlags::from_bits(flags_byte).unwrap();
     let (input, attr_type_byte) = be_u8(input)?;
     let attr_type: AttrType = attr_type_byte.into();
-    println!("attr_type {:?}", attr_type);
 
     // Decide extended length presence and parse length
     let (input, length_bytes) = if flags.is_extended() {
@@ -236,14 +224,20 @@ fn parse_bgp_attribute<'a>(
     }
     let (attr_payload, input) = input.split_at(attr_len as usize);
 
+    // Set parse context for MP_NLRI attributes
+    set_parse_context((*opt).clone());
+
     // Parse the attribute using the appropriate selector with error context
     let (_, attr) =
-        Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt, opt)).map_err(|e| {
+        Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt)).map_err(|e| {
             BgpParseError::AttributeParseError {
                 attr_type,
                 source: Box::new(BgpParseError::from(e)),
             }
         })?;
+
+    // Clear parse context
+    set_parse_context(None);
 
     Ok((input, attr))
 }
@@ -353,7 +347,6 @@ impl fmt::Display for Vpnv4Net {
 }
 
 pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Vpnv4Net> {
-    println!("XXX parse_bgp_nlri_vpnv4_prefix addpath {}", add_path);
     let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
 
     // MPLS Label (3 octets) + RD (8 octets) + IPv4 Prefix (0-4 octets).
@@ -428,13 +421,27 @@ pub fn peek_bgp_length(input: &[u8]) -> usize {
     }
 }
 
-#[derive(Default, Debug)]
+thread_local! {
+    static PARSE_CONTEXT: RefCell<Option<ParseOption>> = RefCell::new(None);
+}
+
+pub fn set_parse_context(opt: Option<ParseOption>) {
+    PARSE_CONTEXT.with(|ctx| {
+        *ctx.borrow_mut() = opt;
+    });
+}
+
+pub fn get_parse_context() -> Option<ParseOption> {
+    PARSE_CONTEXT.with(|ctx| ctx.borrow().clone())
+}
+
+#[derive(Default, Debug, Clone)]
 pub struct Direct {
     pub recv: bool,
     pub send: bool,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct ParseOption {
     // AS4
     pub as4: Direct,
@@ -448,11 +455,13 @@ impl ParseOption {
     }
 
     pub fn is_add_path_recv(&self, afi: Afi, safi: Safi) -> bool {
-        println!("AFI: {} SAFI: {}", afi, safi);
-        if afi == Afi::Ip && safi == Safi::MplsVpn {
-            return true;
-        }
-        return true;
+        let key = AfiSafi { afi, safi };
+        self.add_path.get(&key).map_or(false, |direct| direct.recv)
+    }
+
+    pub fn clear(&mut self) {
+        self.as4 = Direct::default();
+        self.add_path.clear();
     }
 }
 

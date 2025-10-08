@@ -3,7 +3,7 @@ use hex_literal::hex;
 
 fn test1(buf: &[u8]) {
     // Parse with AS4 = truue.
-    let packet = parse_bgp_packet(buf, true);
+    let packet = parse_bgp_packet(buf, true, None);
     assert!(packet.is_ok());
 
     let (_, packet) = packet.unwrap();
@@ -20,7 +20,7 @@ fn test1(buf: &[u8]) {
 
 fn test2(buf: &[u8]) {
     // Parse with AS4 = truue.
-    let packet = parse_bgp_packet(buf, true);
+    let packet = parse_bgp_packet(buf, true, None);
     assert!(packet.is_ok());
 
     let (_, packet) = packet.unwrap();
@@ -99,7 +99,7 @@ ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
 01 01 01 00 0c 20 01 01 01 01
 "
     );
-    let packet = parse_bgp_packet(PACKET, true);
+    let packet = parse_bgp_packet(PACKET, true, None);
     assert!(packet.is_ok());
     let (_, packet) = packet.unwrap();
     if let BgpPacket::Update(update) = packet {

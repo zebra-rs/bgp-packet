@@ -15,7 +15,7 @@ fn test_attribute_parse_error_context() {
         "00"   // Truncated data
     );
 
-    let result = parse_bgp_packet(&invalid_update, false);
+    let result = parse_bgp_packet(&invalid_update, false, None);
 
     match result {
         Err(BgpParseError::IncompleteData { needed }) => {
