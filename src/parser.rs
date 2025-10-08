@@ -95,46 +95,52 @@ impl From<AttrType> for u8 {
     }
 }
 
-struct AttrSelector(AttrType, Option<bool>);
+struct AttrSelector<'a>(AttrType, Option<bool>, &'a Option<ParseOption>);
 
 #[derive(NomBE, Clone, Debug)]
 #[nom(Selector = "AttrSelector")]
 pub enum Attr {
-    #[nom(Selector = "AttrSelector(AttrType::Origin, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::Origin, None, _)")]
     Origin(Origin),
-    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(false))")]
+    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(false), _)")]
     As2Path(As2Path),
-    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(true))")]
+    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(true), _)")]
     As4Path(As4Path),
-    #[nom(Selector = "AttrSelector(AttrType::NextHop, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::NextHop, None, _)")]
     NextHop(NexthopAttr),
-    #[nom(Selector = "AttrSelector(AttrType::Med, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::Med, None, _)")]
     Med(Med),
-    #[nom(Selector = "AttrSelector(AttrType::LocalPref, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::LocalPref, None, _)")]
     LocalPref(LocalPref),
-    #[nom(Selector = "AttrSelector(AttrType::AtomicAggregate, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::AtomicAggregate, None, _)")]
     AtomicAggregate(AtomicAggregate),
-    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(false))")]
+    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(false), _)")]
     Aggregator2(Aggregator2),
-    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(true))")]
+    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(true), _)")]
     Aggregator(Aggregator),
-    #[nom(Selector = "AttrSelector(AttrType::Community, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::Community, None, _)")]
     Community(Community),
-    #[nom(Selector = "AttrSelector(AttrType::OriginatorId, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::OriginatorId, None, _)")]
     OriginatorId(OriginatorId),
-    #[nom(Selector = "AttrSelector(AttrType::ClusterList, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::ClusterList, None, _)")]
     ClusterList(ClusterList),
-    #[nom(Selector = "AttrSelector(AttrType::MpReachNlri, None)")]
+    #[nom(
+        Selector = "AttrSelector(AttrType::MpReachNlri, None, opt)",
+        Parse = "MpNlriReachAttr::parse_be_with_opt"
+    )]
     MpReachNlri(MpNlriReachAttr),
-    #[nom(Selector = "AttrSelector(AttrType::MpUnreachNlri, None)")]
+    #[nom(
+        Selector = "AttrSelector(AttrType::MpUnreachNlri, None, opt)",
+        Parse = "MpNlriUnreachAttr::parse_be_with_opt"
+    )]
     MpUnreachNlri(MpNlriUnreachAttr),
-    #[nom(Selector = "AttrSelector(AttrType::ExtendedCom, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::ExtendedCom, None, _)")]
     ExtendedCom(ExtCommunity),
-    #[nom(Selector = "AttrSelector(AttrType::PmsiTunnel, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::PmsiTunnel, None, _)")]
     PmsiTunnel(PmsiTunnel),
-    #[nom(Selector = "AttrSelector(AttrType::Aigp, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::Aigp, None, _)")]
     Aigp(Aigp),
-    #[nom(Selector = "AttrSelector(AttrType::LargeCom, None)")]
+    #[nom(Selector = "AttrSelector(AttrType::LargeCom, None, _)")]
     LargeCom(LargeCommunity),
 }
 
@@ -194,11 +200,18 @@ fn parse_bgp_attribute<'a>(
     as4: bool,
     opt: &'a Option<ParseOption>,
 ) -> Result<(&'a [u8], Attr), BgpParseError> {
+    if opt.is_some() {
+        println!("parse_bgp_attribute opt exist");
+    } else {
+        println!("parse_bgp_attribute opt does not exist");
+    }
+
     // Parse the attribute flags and type code
     let (input, flags_byte) = be_u8(input)?;
     let flags = AttributeFlags::from_bits(flags_byte).unwrap();
     let (input, attr_type_byte) = be_u8(input)?;
     let attr_type: AttrType = attr_type_byte.into();
+    println!("attr_type {:?}", attr_type);
 
     // Decide extended length presence and parse length
     let (input, length_bytes) = if flags.is_extended() {
@@ -225,7 +238,7 @@ fn parse_bgp_attribute<'a>(
 
     // Parse the attribute using the appropriate selector with error context
     let (_, attr) =
-        Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt)).map_err(|e| {
+        Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt, opt)).map_err(|e| {
             BgpParseError::AttributeParseError {
                 attr_type,
                 source: Box::new(BgpParseError::from(e)),
@@ -264,20 +277,13 @@ pub struct Ipv4Nlri {
     pub prefix: Ipv4Net,
 }
 
-pub fn parse_ipv4_prefix(input: &[u8]) -> IResult<&[u8], Ipv4Net> {
-    let (input, plen) = be_u8(input)?;
-    let psize = nlri_psize(plen);
-    if input.len() < psize {
-        return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
-    }
-    let mut paddr = [0u8; 4];
-    paddr[..psize].copy_from_slice(&input[..psize]);
-    let (input, _) = take(psize).parse(input)?;
-    let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net crete error");
-    Ok((input, prefix))
+#[derive(Debug, Clone)]
+pub struct Ipv6Nlri {
+    pub id: u32,
+    pub prefix: Ipv6Net,
 }
 
-pub fn parse_ipv4_prefix_addpath(input: &[u8], add_path: bool) -> IResult<&[u8], Ipv4Nlri> {
+pub fn parse_ipv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Ipv4Nlri> {
     let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
     let (input, plen) = be_u8(input)?;
     let psize = nlri_psize(plen);
@@ -292,7 +298,8 @@ pub fn parse_ipv4_prefix_addpath(input: &[u8], add_path: bool) -> IResult<&[u8],
     Ok((input, nlri))
 }
 
-pub fn parse_bgp_nlri_ipv6_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
+pub fn parse_bgp_nlri_ipv6_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Ipv6Nlri> {
+    let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
     let (input, plen) = be_u8(input)?;
     let psize = nlri_psize(plen);
     if input.len() < psize {
@@ -302,7 +309,8 @@ pub fn parse_bgp_nlri_ipv6_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
     paddr[..psize].copy_from_slice(&input[..psize]);
     let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv6Net::new(Ipv6Addr::from(paddr), plen).expect("Ipv6Net create error");
-    Ok((input, prefix))
+    let nlri = Ipv6Nlri { id, prefix };
+    Ok((input, nlri))
 }
 
 pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
@@ -321,12 +329,13 @@ pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
 
 fn parse_bgp_nlri_ipv4(input: &[u8], length: u16, add_path: bool) -> IResult<&[u8], Vec<Ipv4Nlri>> {
     let (nlri, input) = input.split_at(length as usize);
-    let (_, nlris) = many0(|i| parse_ipv4_prefix_addpath(i, add_path)).parse(nlri)?;
+    let (_, nlris) = many0(|i| parse_ipv4_prefix(i, add_path)).parse(nlri)?;
     Ok((input, nlris))
 }
 
 #[derive(Debug, Clone)]
 pub struct Vpnv4Net {
+    pub id: u32,
     pub label: Label,
     pub rd: RouteDistinguisher,
     pub prefix: Ipv4Net,
@@ -343,7 +352,10 @@ impl fmt::Display for Vpnv4Net {
     }
 }
 
-pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Vpnv4Net> {
+pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Vpnv4Net> {
+    println!("XXX parse_bgp_nlri_vpnv4_prefix addpath {}", add_path);
+    let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
+
     // MPLS Label (3 octets) + RD (8 octets) + IPv4 Prefix (0-4 octets).
     let (input, mut plen) = be_u8(input)?;
     let psize = nlri_psize(plen);
@@ -367,7 +379,12 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8]) -> IResult<&[u8], Vpnv4Net> {
     let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net create error");
 
-    let vpnv4 = Vpnv4Net { label, rd, prefix };
+    let vpnv4 = Vpnv4Net {
+        id,
+        label,
+        rd,
+        prefix,
+    };
 
     Ok((input, vpnv4))
 }
@@ -431,10 +448,11 @@ impl ParseOption {
     }
 
     pub fn is_add_path_recv(&self, afi: Afi, safi: Safi) -> bool {
+        println!("AFI: {} SAFI: {}", afi, safi);
         if afi == Afi::Ip && safi == Safi::MplsVpn {
             return true;
         }
-        false
+        return true;
     }
 }
 
