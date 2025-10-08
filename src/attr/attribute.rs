@@ -2,15 +2,16 @@ use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    Afi, ParseBe, RouteDistinguisher, Safi, Vpnv4Net, many0, nlri_psize, parse_bgp_evpn_prefix,
-    parse_bgp_nlri_ipv6_prefix, parse_bgp_nlri_vpnv4_prefix,
+    get_parse_context, many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
+    parse_bgp_nlri_vpnv4_prefix, Afi, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi,
+    Vpnv4Net,
 };
 use ipnet::Ipv6Net;
 use nom::{
-    IResult,
     bytes::complete::take,
-    error::{ErrorKind, make_error},
-    number::complete::{be_u8, be_u24, be_u32, be_u128},
+    error::{make_error, ErrorKind},
+    number::complete::{be_u128, be_u24, be_u32, be_u8},
+    IResult,
 };
 use nom_derive::*;
 
@@ -30,7 +31,7 @@ pub struct MpNlriUnreachHeader {
 #[derive(Clone, Debug, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
-    pub ipv6_prefix: Vec<Ipv6Net>,
+    pub ipv6_prefix: Vec<Ipv6Nlri>,
     pub ipv6_nexthop: Option<Ipv6Addr>,
     pub vpnv4_prefix: Vec<Vpnv4Net>,
     pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
@@ -39,7 +40,7 @@ pub struct MpNlriReachAttr {
 
 #[derive(Clone, Debug, Default)]
 pub struct MpNlriUnreachAttr {
-    pub ipv6_prefix: Vec<Ipv6Net>,
+    pub ipv6_prefix: Vec<Ipv6Nlri>,
     pub ipv6_eor: bool,
     pub vpnv4_prefix: Vec<Vpnv4Net>,
     pub vpnv4_eor: bool,
@@ -97,6 +98,7 @@ pub enum EvpnRoute {
 
 #[derive(Debug, Clone)]
 pub struct EvpnMac {
+    pub id: u32,
     pub rd: RouteDistinguisher,
     pub esi_type: u8,
     pub ether_tag: u32,
@@ -117,7 +119,8 @@ impl Evpn {
     }
 }
 
-pub fn parse_evpn_nlri(input: &[u8]) -> IResult<&[u8], EvpnRoute> {
+pub fn parse_evpn_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], EvpnRoute> {
+    let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
     let (input, typ) = be_u8(input)?;
     let route_type: EvpnRouteType = typ.into();
     let (input, _length) = be_u8(input)?;
@@ -145,6 +148,7 @@ pub fn parse_evpn_nlri(input: &[u8]) -> IResult<&[u8], EvpnRoute> {
             let (input, vni) = be_u24(input)?;
 
             let mut evpn = EvpnMac {
+                id,
                 rd,
                 esi_type,
                 ether_tag,
@@ -184,19 +188,27 @@ impl fmt::Display for Vpnv4Nexthop {
     }
 }
 
-impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
-    fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
+impl MpNlriReachAttr {
+    pub fn parse_be_with_opt<'a>(
+        input: &'a [u8],
+        opt: Option<ParseOption>,
+    ) -> nom::IResult<&'a [u8], Self> {
         if input.len() < size_of::<MpNlriReachHeader>() {
             return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
         }
         let (input, header) = MpNlriReachHeader::parse_be(input)?;
+        let add_path = if let Some(o) = opt {
+            o.is_add_path_recv(header.afi, header.safi)
+        } else {
+            false
+        };
         if header.afi == Afi::Ip && header.safi == Safi::MplsVpn {
             let (input, rd) = RouteDistinguisher::parse_be(input)?;
             let (input, nhop) = be_u32(input)?;
             let nhop: Ipv4Addr = Ipv4Addr::from(nhop);
             let nhop = Vpnv4Nexthop { rd, nhop };
             let (input, snpa) = be_u8(input)?;
-            let (_, updates) = many0(parse_bgp_nlri_vpnv4_prefix).parse(input)?;
+            let (_, updates) = many0(|i| parse_bgp_nlri_vpnv4_prefix(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 snpa,
                 vpnv4_prefix: updates,
@@ -212,7 +224,7 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             let (input, nhop) = be_u128(input)?;
             let nhop: Ipv6Addr = Ipv6Addr::from(nhop);
             let (input, snpa) = be_u8(input)?;
-            let (_, updates) = many0(parse_bgp_nlri_ipv6_prefix).parse(input)?;
+            let (_, updates) = many0(|i| parse_bgp_nlri_ipv6_prefix(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 snpa,
                 ipv6_prefix: updates,
@@ -231,7 +243,7 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
             let (input, snpa) = be_u8(input)?;
 
             // EVPN
-            let (input, evpns) = many0(parse_evpn_nlri).parse(input)?;
+            let (input, evpns) = many0(|i| parse_evpn_nlri(i, add_path)).parse(input)?;
 
             let mp_nlri = MpNlriReachAttr {
                 snpa,
@@ -245,8 +257,11 @@ impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
     }
 }
 
-impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
-    fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
+impl MpNlriUnreachAttr {
+    pub fn parse_be_with_opt<'a>(
+        input: &'a [u8],
+        opt: Option<ParseOption>,
+    ) -> nom::IResult<&'a [u8], Self> {
         // AFI + SAFI = 3.
         if input.len() < 3 {
             return Err(nom::Err::Error(nom::error::Error::new(
@@ -255,7 +270,11 @@ impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
             )));
         }
         let (input, header) = MpNlriUnreachHeader::parse_be(input)?;
-        //
+        let add_path = if let Some(o) = opt {
+            o.is_add_path_recv(header.afi, header.safi)
+        } else {
+            false
+        };
         if header.afi == Afi::Ip && header.safi == Safi::MplsVpn {
             if input.is_empty() {
                 let mp_nlri = MpNlriUnreachAttr {
@@ -264,7 +283,8 @@ impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
                 };
                 return Ok((input, mp_nlri));
             }
-            let (input, withdrawal) = many0(parse_bgp_nlri_vpnv4_prefix).parse(input)?;
+            let (input, withdrawal) =
+                many0(|i| parse_bgp_nlri_vpnv4_prefix(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriUnreachAttr {
                 vpnv4_prefix: withdrawal,
                 ..Default::default()
@@ -279,7 +299,8 @@ impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
                 };
                 return Ok((input, mp_nlri));
             }
-            let (input, withdrawal) = many0(parse_bgp_nlri_ipv6_prefix).parse(input)?;
+            let (input, withdrawal) =
+                many0(|i| parse_bgp_nlri_ipv6_prefix(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriUnreachAttr {
                 ipv6_prefix: withdrawal,
                 ..Default::default()
@@ -294,7 +315,7 @@ impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
                 };
                 return Ok((input, mp_nlri));
             }
-            let (input, evpns) = many0(parse_evpn_nlri).parse(input)?;
+            let (input, evpns) = many0(|i| parse_evpn_nlri(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriUnreachAttr {
                 evpn_prefix: evpns,
                 ..Default::default()
@@ -302,6 +323,21 @@ impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
             return Ok((input, mp_nlri));
         }
         Err(nom::Err::Error(make_error(input, ErrorKind::Tag)))
+    }
+}
+
+// ParseBe implementations that read from thread-local context
+impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
+    fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
+        let opt = get_parse_context();
+        Self::parse_be_with_opt(input, opt)
+    }
+}
+
+impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
+    fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
+        let opt = get_parse_context();
+        Self::parse_be_with_opt(input, opt)
     }
 }
 

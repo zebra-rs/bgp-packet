@@ -54,6 +54,14 @@ impl AddPathSendReceive {
         let send_receive: Self = val.into();
         Ok((input, send_receive))
     }
+
+    pub fn is_receive(&self) -> bool {
+        *self == AddPathSendReceive::Receive || *self == AddPathSendReceive::SendReceive
+    }
+
+    pub fn is_send(&self) -> bool {
+        *self == AddPathSendReceive::Send || *self == AddPathSendReceive::SendReceive
+    }
 }
 
 impl fmt::Display for AddPathSendReceive {
