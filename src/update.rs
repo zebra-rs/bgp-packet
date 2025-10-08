@@ -1,9 +1,8 @@
 use std::fmt;
 
-use crate::Attr;
+use crate::{Attr, Ipv4Nlri};
 
-use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
-use ipnet::Ipv4Net;
+use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
 use nom_derive::*;
 
 #[derive(Debug, NomBE)]
@@ -12,9 +11,9 @@ pub struct UpdatePacket {
     #[nom(Ignore)]
     pub attrs: Vec<Attr>,
     #[nom(Ignore)]
-    pub ipv4_update: Vec<Ipv4Net>,
+    pub ipv4_update: Vec<Ipv4Nlri>,
     #[nom(Ignore)]
-    pub ipv4_withdraw: Vec<Ipv4Net>,
+    pub ipv4_withdraw: Vec<Ipv4Nlri>,
 }
 
 impl UpdatePacket {
@@ -45,7 +44,7 @@ impl fmt::Display for UpdatePacket {
             write!(f, " None")?;
         } else {
             for update in self.ipv4_update.iter() {
-                write!(f, "\n  {}", update)?;
+                write!(f, "\n  {}", update.prefix)?;
             }
         }
         write!(f, "\n IPv4 Withdraw:")?;
@@ -53,7 +52,7 @@ impl fmt::Display for UpdatePacket {
             write!(f, " None")?;
         } else {
             for withdraw in self.ipv4_withdraw.iter() {
-                write!(f, "\n  {}", withdraw)?;
+                write!(f, "\n  {}", withdraw.prefix)?;
             }
         }
         Ok(())

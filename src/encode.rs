@@ -76,9 +76,9 @@ impl From<UpdatePacket> for BytesMut {
 
         // NLRI.
         for ip in update.ipv4_update.iter() {
-            buf.put_u8(ip.prefix_len());
-            let plen = nlri_psize(ip.prefix_len());
-            buf.put(&ip.addr().octets()[0..plen]);
+            buf.put_u8(ip.prefix.prefix_len());
+            let plen = nlri_psize(ip.prefix.prefix_len());
+            buf.put(&ip.prefix.addr().octets()[0..plen]);
         }
 
         const LENGTH_POS: std::ops::Range<usize> = 16..18;

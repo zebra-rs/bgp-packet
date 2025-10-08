@@ -253,7 +253,7 @@ pub fn nlri_psize(plen: u8) -> usize {
     plen.div_ceil(8).into()
 }
 
-#[derive()]
+#[derive(Debug, Clone)]
 pub struct Ipv4Nlri {
     pub id: u32,
     pub prefix: Ipv4Net,
@@ -314,10 +314,10 @@ pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
     Ok((input, prefix))
 }
 
-fn parse_bgp_nlri_ipv4(input: &[u8], length: u16, add_path: bool) -> IResult<&[u8], Vec<Ipv4Net>> {
+fn parse_bgp_nlri_ipv4(input: &[u8], length: u16, add_path: bool) -> IResult<&[u8], Vec<Ipv4Nlri>> {
     let (nlri, input) = input.split_at(length as usize);
-    let (_, prefix) = many0(parse_ipv4_prefix).parse(nlri)?;
-    Ok((input, prefix))
+    let (_, nlris) = many0(|i| parse_ipv4_prefix_addpath(i, add_path)).parse(nlri)?;
+    Ok((input, nlris))
 }
 
 #[derive(Debug, Clone)]
@@ -372,15 +372,20 @@ fn parse_bgp_update_packet(
     as4: bool,
     opt: Option<ParseOption>,
 ) -> Result<(&[u8], UpdatePacket), BgpParseError> {
+    // AddPath receive.
+    let add_path = match opt {
+        Some(opt) => opt.is_add_path_recv(Afi::Ip, Safi::Unicast),
+        None => false,
+    };
     let (input, mut packet) = UpdatePacket::parse_be(input)?;
     let (input, withdraw_len) = be_u16(input)?;
-    let (input, mut withdrawal) = parse_bgp_nlri_ipv4(input, withdraw_len, false)?;
+    let (input, mut withdrawal) = parse_bgp_nlri_ipv4(input, withdraw_len, add_path)?;
     packet.ipv4_withdraw.append(&mut withdrawal);
     let (input, attr_len) = be_u16(input)?;
     let (input, mut attrs) = parse_bgp_update_attribute(input, attr_len, as4)?;
     packet.attrs.append(&mut attrs);
     let nlri_len = packet.header.length - BGP_HEADER_LEN - 2 - withdraw_len - 2 - attr_len;
-    let (input, mut updates) = parse_bgp_nlri_ipv4(input, nlri_len, false)?;
+    let (input, mut updates) = parse_bgp_nlri_ipv4(input, nlri_len, add_path)?;
     packet.ipv4_update.append(&mut updates);
     Ok((input, packet))
 }
@@ -409,9 +414,9 @@ pub struct Direct {
 #[derive(Default, Debug)]
 pub struct ParseOption {
     // AS4
-    as4: Direct,
+    pub as4: Direct,
     // AddPath
-    add_path: BTreeMap<AfiSafi, Direct>,
+    pub add_path: BTreeMap<AfiSafi, Direct>,
 }
 
 impl ParseOption {
