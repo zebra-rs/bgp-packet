@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 use nom::number::complete::be_u24;
 use nom_derive::*;
 
-use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe, u32_u8_3};
+use crate::{u32_u8_3, AttrEmitter, AttrFlags, AttrType, ParseBe};
 
 #[derive(Clone, NomBE)]
 pub struct PmsiTunnel {

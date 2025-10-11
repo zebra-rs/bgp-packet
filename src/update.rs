@@ -2,10 +2,10 @@ use std::fmt;
 
 use crate::{Attr, Ipv4Nlri};
 
-use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
+use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
 use nom_derive::*;
 
-#[derive(Debug, NomBE)]
+#[derive(NomBE)]
 pub struct UpdatePacket {
     pub header: BgpHeader,
     #[nom(Ignore)]
@@ -33,11 +33,11 @@ impl Default for UpdatePacket {
     }
 }
 
-impl fmt::Display for UpdatePacket {
+impl fmt::Debug for UpdatePacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Update Message:")?;
         for attr in self.attrs.iter() {
-            write!(f, "\n {}", attr)?;
+            write!(f, "\n {:?}", attr)?;
         }
         write!(f, "\n IPv4 Updates:")?;
         if self.ipv4_update.is_empty() {

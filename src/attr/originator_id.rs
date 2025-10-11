@@ -6,7 +6,7 @@ use std::net::Ipv4Addr;
 
 use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
 
-#[derive(Clone, NomBE, Debug)]
+#[derive(Clone, NomBE)]
 pub struct OriginatorId {
     pub id: Ipv4Addr,
 }
@@ -41,6 +41,12 @@ impl AttrEmitter for OriginatorId {
 
 impl fmt::Display for OriginatorId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Originator ID: {}", self.id)
+        write!(f, "{}", self.id)
+    }
+}
+
+impl fmt::Debug for OriginatorId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Originator ID: {}", self)
     }
 }
