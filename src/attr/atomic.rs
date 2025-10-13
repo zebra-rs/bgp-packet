@@ -5,7 +5,7 @@ use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
-#[derive(Clone, Debug, NomBE)]
+#[derive(Clone, NomBE)]
 pub struct AtomicAggregate {}
 
 impl AtomicAggregate {
@@ -39,6 +39,12 @@ impl AttrEmitter for AtomicAggregate {
 }
 
 impl fmt::Display for AtomicAggregate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "")
+    }
+}
+
+impl fmt::Debug for AtomicAggregate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, " Atomic Aggregate")
     }

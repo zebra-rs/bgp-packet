@@ -8,7 +8,7 @@ use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
 
 use super::AS_TRANS;
 
-#[derive(Clone, Debug, NomBE)]
+#[derive(Clone, NomBE)]
 pub struct Aggregator {
     pub asn: u32,
     pub ip: Ipv4Addr,
@@ -45,12 +45,18 @@ impl AttrEmitter for Aggregator {
 
 impl fmt::Display for Aggregator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " Aggregator: {}", self.asn)
+        write!(f, "{}", self.asn)
+    }
+}
+
+impl fmt::Debug for Aggregator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " Aggregator: {}", self)
     }
 }
 
 // Aggregator with 2octet AS.
-#[derive(Clone, Debug, NomBE)]
+#[derive(Clone, NomBE)]
 pub struct Aggregator2 {
     pub asn: u16,
     pub ip: Ipv4Addr,
@@ -87,7 +93,13 @@ impl AttrEmitter for Aggregator2 {
 
 impl fmt::Display for Aggregator2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " Aggregator: {}", self.asn)
+        write!(f, "{}", self.asn)
+    }
+}
+
+impl fmt::Debug for Aggregator2 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, " Aggregator: {}", self)
     }
 }
 

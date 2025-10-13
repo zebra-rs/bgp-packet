@@ -151,13 +151,13 @@ impl fmt::Display for As4Path {
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
             .join(" ");
-        write!(f, "AS Path: {v}")
+        write!(f, "{v}")
     }
 }
 
 impl fmt::Debug for As4Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, " AS Path: {}", self)
+        write!(f, "AS Path: {}", self)
     }
 }
 

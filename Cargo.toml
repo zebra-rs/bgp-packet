@@ -27,6 +27,7 @@ bitflags = "2.6.0"
 byteorder = "1.5"
 bytes = "1.9"
 ipnet = { version = "2.10", features = ["serde"] }
+itertools = "0.14.0"
 nom = "8"
 nom-derive = { git = "https://github.com/rust-bakery/nom-derive", branch = "master" }
 regex = "1.11.1"

@@ -2,13 +2,14 @@ use std::fmt;
 use std::net::Ipv4Addr;
 
 use bytes::{BufMut, BytesMut};
+use itertools::Itertools;
 use nom::IResult;
 use nom::Parser;
 use nom::number::complete::be_u32;
 
 use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe, many0};
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct ClusterList {
     pub list: Vec<Ipv4Addr>,
 }
@@ -49,10 +50,12 @@ impl AttrEmitter for ClusterList {
 
 impl fmt::Display for ClusterList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cluster List:")?;
-        for list in self.list.iter() {
-            write!(f, " {}", list)?;
-        }
-        Ok(())
+        write!(f, "{}", self.list.iter().format(" "))
+    }
+}
+
+impl fmt::Debug for ClusterList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Cluster List: {}", self)
     }
 }
