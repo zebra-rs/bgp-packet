@@ -20,6 +20,20 @@ pub const AS_CONFED_SET: u8 = 4;
 #[allow(dead_code)]
 pub const AS_TRANS: u16 = 23456;
 
+/// Calculate AS Path segment length according to RFC 4271 and RFC 5065.
+/// - AS_SEQUENCE: Each AS number counts as 1
+/// - AS_SET: The entire set counts as 1 (regardless of size)
+/// - AS_CONFED_SEQUENCE: Does NOT count (RFC 5065)
+/// - AS_CONFED_SET: Does NOT count (RFC 5065)
+fn calculate_segment_length(typ: u8, asn_count: usize) -> u32 {
+    match typ {
+        AS_SEQ => asn_count as u32,         // Each AS counts as 1
+        AS_SET => 1,                        // Entire set counts as 1
+        AS_CONFED_SEQ | AS_CONFED_SET => 0, // Confederation segments don't count
+        _ => 0,
+    }
+}
+
 #[derive(Debug, NomBE)]
 pub struct AsSegmentHeader {
     pub typ: u8,
@@ -35,12 +49,25 @@ pub struct As2Segment {
 #[derive(Clone, Debug)]
 pub struct As2Path {
     pub segs: Vec<As2Segment>,
+    pub length: u32,
+}
+
+impl As2Path {
+    /// Calculate AS Path length from segments according to RFC 4271 and RFC 5065.
+    fn calculate_length(&self) -> u32 {
+        self.segs
+            .iter()
+            .map(|seg| calculate_segment_length(seg.typ, seg.asn.len()))
+            .sum()
+    }
 }
 
 impl ParseBe<As2Path> for As2Path {
     fn parse_be(input: &[u8]) -> IResult<&[u8], As2Path> {
         let (input, segs) = many0(parse_bgp_attr_as2_segment).parse(input)?;
-        Ok((input, As2Path { segs }))
+        let mut path = As2Path { segs, length: 0 };
+        path.length = path.calculate_length();
+        Ok((input, path))
     }
 }
 
@@ -116,6 +143,7 @@ impl fmt::Display for As4Segment {
 #[derive(Clone)]
 pub struct As4Path {
     pub segs: VecDeque<As4Segment>,
+    pub length: u32,
 }
 
 impl AttrEmitter for As4Path {
@@ -139,7 +167,12 @@ impl AttrEmitter for As4Path {
 impl ParseBe<As4Path> for As4Path {
     fn parse_be(input: &[u8]) -> IResult<&[u8], As4Path> {
         let (input, segs) = many0(parse_bgp_attr_as4_segment).parse(input)?;
-        Ok((input, As4Path { segs: segs.into() }))
+        let mut path = As4Path {
+            segs: segs.into(),
+            length: 0,
+        };
+        path.length = path.calculate_length();
+        Ok((input, path))
     }
 }
 
@@ -215,6 +248,9 @@ impl FromStr for As4Path {
             aspath.segs.push_back(segment);
         }
 
+        // Calculate total length after parsing
+        aspath.length = aspath.calculate_length();
+
         Ok(aspath)
     }
 }
@@ -223,7 +259,21 @@ impl As4Path {
     pub fn new() -> Self {
         Self {
             segs: VecDeque::new(),
+            length: 0,
         }
+    }
+
+    /// Calculate AS Path length from segments according to RFC 4271 and RFC 5065.
+    fn calculate_length(&self) -> u32 {
+        self.segs
+            .iter()
+            .map(|seg| calculate_segment_length(seg.typ, seg.asn.len()))
+            .sum()
+    }
+
+    /// Returns the AS Path length according to RFC 4271 and RFC 5065.
+    pub fn length(&self) -> u32 {
+        self.length
     }
 
     pub fn prepend(&self, other: Self) -> Self {
@@ -235,6 +285,8 @@ impl As4Path {
         } else {
             aspath.segs.push_front(other.segs[0].clone());
         }
+        // Recalculate length after prepending
+        aspath.length = aspath.calculate_length();
         aspath
     }
 }
@@ -270,5 +322,63 @@ mod tests {
         let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
         let result = aspath.prepend(prepend);
         assert_eq!(result.to_string(), "1 2 3 10 11 12")
+    }
+
+    #[test]
+    fn length_as_sequence() {
+        // AS_SEQUENCE: Each AS counts as 1
+        let aspath: As4Path = As4Path::from_str("1 2 3").unwrap();
+        assert_eq!(aspath.length(), 3);
+    }
+
+    #[test]
+    fn length_as_set() {
+        // AS_SET: Entire set counts as 1
+        let aspath: As4Path = As4Path::from_str("1 2 {3 4 5}").unwrap();
+        assert_eq!(aspath.length(), 3); // 2 from sequence + 1 from set
+    }
+
+    #[test]
+    fn length_confed_sequence() {
+        // AS_CONFED_SEQUENCE: Does not count (RFC 5065)
+        let aspath: As4Path = As4Path::from_str("1 (2 3) 4").unwrap();
+        assert_eq!(aspath.length(), 2); // Only 1 and 4 count
+    }
+
+    #[test]
+    fn length_confed_set() {
+        // AS_CONFED_SET: Does not count (RFC 5065)
+        let aspath: As4Path = As4Path::from_str("1 [2 3] 4").unwrap();
+        assert_eq!(aspath.length(), 2); // Only 1 and 4 count
+    }
+
+    #[test]
+    fn length_mixed() {
+        // Mixed: AS_SEQ + AS_SET + AS_CONFED_SEQ + AS_CONFED_SET
+        let aspath: As4Path = As4Path::from_str("1 2 {3 4} [5 6] (7 8) 9").unwrap();
+        assert_eq!(aspath.length(), 4); // 1, 2 from seq + 1 from set + 9 = 4
+    }
+
+    #[test]
+    fn length_empty() {
+        let aspath: As4Path = As4Path::new();
+        assert_eq!(aspath.length(), 0);
+    }
+
+    #[test]
+    fn length_after_prepend() {
+        let aspath: As4Path = As4Path::from_str("10 11 12").unwrap();
+        assert_eq!(aspath.length(), 3);
+
+        let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.length(), 6); // 3 + 3 = 6
+    }
+
+    #[test]
+    fn length_large_set() {
+        // Large AS_SET still counts as 1
+        let aspath: As4Path = As4Path::from_str("1 {2 3 4 5 6 7 8 9 10} 11").unwrap();
+        assert_eq!(aspath.length(), 3); // 1 + 1 (set) + 11 = 3
     }
 }
