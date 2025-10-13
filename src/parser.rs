@@ -13,11 +13,11 @@ use super::attr::{
 use super::*;
 use bytes::BytesMut;
 use ipnet::{Ipv4Net, Ipv6Net};
+use nom::IResult;
 use nom::bytes::complete::take;
 use nom::combinator::peek;
-use nom::error::{make_error, ErrorKind};
-use nom::number::complete::{be_u16, be_u32, be_u8};
-use nom::IResult;
+use nom::error::{ErrorKind, make_error};
+use nom::number::complete::{be_u8, be_u16, be_u32};
 use nom_derive::*;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
