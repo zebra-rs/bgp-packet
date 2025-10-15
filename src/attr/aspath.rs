@@ -1,15 +1,15 @@
 use bytes::{BufMut, BytesMut};
-use nom::IResult;
 use nom::multi::count;
 use nom::number::complete::{be_u16, be_u32};
+use nom::IResult;
 use nom_derive::*;
 use std::collections::VecDeque;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::{AttrType, ParseBe, many0};
+use crate::{many0, AttrType, ParseBe};
 
-use super::aspath_token::{Token, tokenizer};
+use super::aspath_token::{tokenizer, Token};
 use super::{AttrEmitter, AttrFlags};
 
 pub const AS_SET: u8 = 1;
@@ -271,23 +271,68 @@ impl As4Path {
             .sum()
     }
 
+    pub fn update_length(&mut self) {
+        self.length = self
+            .segs
+            .iter()
+            .map(|seg| calculate_segment_length(seg.typ, seg.asn.len()))
+            .sum();
+    }
+
     /// Returns the AS Path length according to RFC 4271 and RFC 5065.
     pub fn length(&self) -> u32 {
         self.length
     }
 
+    /// Prepend an AS path to this path.
+    /// Returns a new AS path with `other` prepended to `self`.
     pub fn prepend(&self, other: Self) -> Self {
-        let mut aspath = self.clone();
-        if !aspath.segs.is_empty() && aspath.segs[0].typ == AS_SEQ {
-            let mut asn = aspath.segs[0].asn.clone();
-            aspath.segs[0].asn = other.segs[0].asn.clone();
-            aspath.segs[0].asn.append(&mut asn);
-        } else {
-            aspath.segs.push_front(other.segs[0].clone());
+        // Handle empty paths
+        if self.segs.is_empty() {
+            return other;
         }
-        // Recalculate length after prepending
-        aspath.length = aspath.calculate_length();
-        aspath
+        if other.segs.is_empty() {
+            return self.clone();
+        }
+
+        // Try to merge if both paths have a single AS_SEQ segment
+        if let Some(merged) = self.try_merge_single_seq(&other) {
+            return merged;
+        }
+
+        // Default: concatenate segments
+        self.concatenate_paths(other)
+    }
+
+    /// Try to merge two single-segment AS_SEQ paths into one segment.
+    fn try_merge_single_seq(&self, other: &Self) -> Option<Self> {
+        if self.segs.len() != 1 || other.segs.len() != 1 {
+            return None;
+        }
+
+        let self_seg = self.segs.front()?;
+        let other_seg = other.segs.front()?;
+
+        if self_seg.typ != AS_SEQ || other_seg.typ != AS_SEQ {
+            return None;
+        }
+
+        // Merge the two AS_SEQ segments
+        let mut merged_seg = other_seg.clone();
+        merged_seg.asn.extend(&self_seg.asn);
+
+        let mut result = Self::new();
+        result.segs.push_back(merged_seg);
+        result.update_length();
+        Some(result)
+    }
+
+    /// Concatenate two AS paths by appending self's segments to other's.
+    fn concatenate_paths(&self, other: Self) -> Self {
+        let mut result = other.clone();
+        result.segs.extend(self.segs.clone());
+        result.update_length();
+        result
     }
 }
 
@@ -321,7 +366,38 @@ mod tests {
         let aspath: As4Path = As4Path::from_str("10 11 12").unwrap();
         let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
         let result = aspath.prepend(prepend);
-        assert_eq!(result.to_string(), "1 2 3 10 11 12")
+        assert_eq!(result.to_string(), "1 2 3 10 11 12");
+        assert_eq!(result.length(), 6);
+    }
+
+    #[test]
+    fn prepend_empty() {
+        let aspath: As4Path = As4Path::new();
+        let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.to_string(), "1 2 3");
+        assert_eq!(result.length(), 3);
+
+        let aspath: As4Path = As4Path::from_str("1 2 3").unwrap();
+        let prepend: As4Path = As4Path::new();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.to_string(), "1 2 3");
+        assert_eq!(result.length(), 3);
+    }
+
+    #[test]
+    fn prepend_seq() {
+        let aspath: As4Path = As4Path::from_str("1").unwrap();
+        let prepend: As4Path = As4Path::from_str("{1} 2 3").unwrap();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.to_string(), "{1} 2 3 1");
+        assert_eq!(result.length(), 4);
+
+        let aspath: As4Path = As4Path::from_str("1 {2}").unwrap();
+        let prepend: As4Path = As4Path::from_str("2 {3} 4 5").unwrap();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.to_string(), "2 {3} 4 5 1 {2}");
+        assert_eq!(result.length(), 6);
     }
 
     #[test]
