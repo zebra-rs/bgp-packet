@@ -1,15 +1,15 @@
 use bytes::{BufMut, BytesMut};
+use nom::IResult;
 use nom::multi::count;
 use nom::number::complete::{be_u16, be_u32};
-use nom::IResult;
 use nom_derive::*;
 use std::collections::VecDeque;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::{many0, AttrType, ParseBe};
+use crate::{AttrType, ParseBe, many0};
 
-use super::aspath_token::{tokenizer, Token};
+use super::aspath_token::{Token, tokenizer};
 use super::{AttrEmitter, AttrFlags};
 
 pub const AS_SET: u8 = 1;
@@ -284,33 +284,55 @@ impl As4Path {
         self.length
     }
 
+    /// Prepend an AS path to this path.
+    /// Returns a new AS path with `other` prepended to `self`.
     pub fn prepend(&self, other: Self) -> Self {
+        // Handle empty paths
         if self.segs.is_empty() {
             return other;
         }
         if other.segs.is_empty() {
             return self.clone();
         }
-        // Both self and other has at least one segment.
-        let mut aspath = self.clone();
-        if aspath.segs.len() == 1 && other.segs.len() == 1 {
-            if let Some(seg) = aspath.segs.get_mut(0) {
-                if let Some(oseg) = other.segs.get(0) {
-                    if seg.typ == AS_SEQ && oseg.typ == AS_SEQ {
-                        let mut new_seg = oseg.clone();
-                        let mut asn = seg.asn.clone();
-                        new_seg.asn.append(&mut asn);
-                        *seg = new_seg;
-                        aspath.update_length();
-                        return aspath;
-                    }
-                }
-            }
+
+        // Try to merge if both paths have a single AS_SEQ segment
+        if let Some(merged) = self.try_merge_single_seq(&other) {
+            return merged;
         }
-        let mut ret = other.clone();
-        ret.segs.append(&mut aspath.segs);
-        ret.update_length();
-        ret
+
+        // Default: concatenate segments
+        self.concatenate_paths(other)
+    }
+
+    /// Try to merge two single-segment AS_SEQ paths into one segment.
+    fn try_merge_single_seq(&self, other: &Self) -> Option<Self> {
+        if self.segs.len() != 1 || other.segs.len() != 1 {
+            return None;
+        }
+
+        let self_seg = self.segs.front()?;
+        let other_seg = other.segs.front()?;
+
+        if self_seg.typ != AS_SEQ || other_seg.typ != AS_SEQ {
+            return None;
+        }
+
+        // Merge the two AS_SEQ segments
+        let mut merged_seg = other_seg.clone();
+        merged_seg.asn.extend(&self_seg.asn);
+
+        let mut result = Self::new();
+        result.segs.push_back(merged_seg);
+        result.update_length();
+        Some(result)
+    }
+
+    /// Concatenate two AS paths by appending self's segments to other's.
+    fn concatenate_paths(&self, other: Self) -> Self {
+        let mut result = other.clone();
+        result.segs.extend(self.segs.clone());
+        result.update_length();
+        result
     }
 }
 
