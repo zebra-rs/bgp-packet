@@ -1,15 +1,15 @@
 use bytes::{BufMut, BytesMut};
-use nom::IResult;
 use nom::multi::count;
 use nom::number::complete::{be_u16, be_u32};
+use nom::IResult;
 use nom_derive::*;
 use std::collections::VecDeque;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::{AttrType, ParseBe, many0};
+use crate::{many0, AttrType, ParseBe};
 
-use super::aspath_token::{Token, tokenizer};
+use super::aspath_token::{tokenizer, Token};
 use super::{AttrEmitter, AttrFlags};
 
 pub const AS_SET: u8 = 1;
@@ -366,7 +366,8 @@ mod tests {
         let aspath: As4Path = As4Path::from_str("10 11 12").unwrap();
         let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
         let result = aspath.prepend(prepend);
-        assert_eq!(result.to_string(), "1 2 3 10 11 12")
+        assert_eq!(result.to_string(), "1 2 3 10 11 12");
+        assert_eq!(result.length(), 6);
     }
 
     #[test]
@@ -375,11 +376,13 @@ mod tests {
         let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
         let result = aspath.prepend(prepend);
         assert_eq!(result.to_string(), "1 2 3");
+        assert_eq!(result.length(), 3);
 
         let aspath: As4Path = As4Path::from_str("1 2 3").unwrap();
         let prepend: As4Path = As4Path::new();
         let result = aspath.prepend(prepend);
         assert_eq!(result.to_string(), "1 2 3");
+        assert_eq!(result.length(), 3);
     }
 
     #[test]
@@ -388,11 +391,13 @@ mod tests {
         let prepend: As4Path = As4Path::from_str("{1} 2 3").unwrap();
         let result = aspath.prepend(prepend);
         assert_eq!(result.to_string(), "{1} 2 3 1");
+        assert_eq!(result.length(), 4);
 
         let aspath: As4Path = As4Path::from_str("1 {2}").unwrap();
         let prepend: As4Path = As4Path::from_str("2 {3} 4 5").unwrap();
         let result = aspath.prepend(prepend);
         assert_eq!(result.to_string(), "2 {3} 4 5 1 {2}");
+        assert_eq!(result.length(), 6);
     }
 
     #[test]
