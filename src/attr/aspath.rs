@@ -1,15 +1,15 @@
 use bytes::{BufMut, BytesMut};
-use nom::IResult;
 use nom::multi::count;
 use nom::number::complete::{be_u16, be_u32};
+use nom::IResult;
 use nom_derive::*;
 use std::collections::VecDeque;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::{AttrType, ParseBe, many0};
+use crate::{many0, AttrType, ParseBe};
 
-use super::aspath_token::{Token, tokenizer};
+use super::aspath_token::{tokenizer, Token};
 use super::{AttrEmitter, AttrFlags};
 
 pub const AS_SET: u8 = 1;
@@ -271,23 +271,46 @@ impl As4Path {
             .sum()
     }
 
+    pub fn update_length(&mut self) {
+        self.length = self
+            .segs
+            .iter()
+            .map(|seg| calculate_segment_length(seg.typ, seg.asn.len()))
+            .sum();
+    }
+
     /// Returns the AS Path length according to RFC 4271 and RFC 5065.
     pub fn length(&self) -> u32 {
         self.length
     }
 
     pub fn prepend(&self, other: Self) -> Self {
-        let mut aspath = self.clone();
-        if !aspath.segs.is_empty() && aspath.segs[0].typ == AS_SEQ {
-            let mut asn = aspath.segs[0].asn.clone();
-            aspath.segs[0].asn = other.segs[0].asn.clone();
-            aspath.segs[0].asn.append(&mut asn);
-        } else {
-            aspath.segs.push_front(other.segs[0].clone());
+        if self.segs.is_empty() {
+            return other;
         }
-        // Recalculate length after prepending
-        aspath.length = aspath.calculate_length();
-        aspath
+        if other.segs.is_empty() {
+            return self.clone();
+        }
+        // Both self and other has at least one segment.
+        let mut aspath = self.clone();
+        if aspath.segs.len() == 1 && other.segs.len() == 1 {
+            if let Some(seg) = aspath.segs.get_mut(0) {
+                if let Some(oseg) = other.segs.get(0) {
+                    if seg.typ == AS_SEQ && oseg.typ == AS_SEQ {
+                        let mut new_seg = oseg.clone();
+                        let mut asn = seg.asn.clone();
+                        new_seg.asn.append(&mut asn);
+                        *seg = new_seg;
+                        aspath.update_length();
+                        return aspath;
+                    }
+                }
+            }
+        }
+        let mut ret = other.clone();
+        ret.segs.append(&mut aspath.segs);
+        ret.update_length();
+        ret
     }
 }
 
@@ -322,6 +345,32 @@ mod tests {
         let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
         let result = aspath.prepend(prepend);
         assert_eq!(result.to_string(), "1 2 3 10 11 12")
+    }
+
+    #[test]
+    fn prepend_empty() {
+        let aspath: As4Path = As4Path::new();
+        let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.to_string(), "1 2 3");
+
+        let aspath: As4Path = As4Path::from_str("1 2 3").unwrap();
+        let prepend: As4Path = As4Path::new();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.to_string(), "1 2 3");
+    }
+
+    #[test]
+    fn prepend_seq() {
+        let aspath: As4Path = As4Path::from_str("1").unwrap();
+        let prepend: As4Path = As4Path::from_str("{1} 2 3").unwrap();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.to_string(), "{1} 2 3 1");
+
+        let aspath: As4Path = As4Path::from_str("1 {2}").unwrap();
+        let prepend: As4Path = As4Path::from_str("2 {3} 4 5").unwrap();
+        let result = aspath.prepend(prepend);
+        assert_eq!(result.to_string(), "2 {3} 4 5 1 {2}");
     }
 
     #[test]
