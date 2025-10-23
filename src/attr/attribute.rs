@@ -2,16 +2,16 @@ use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    Afi, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi, Vpnv4Net, get_parse_context,
-    many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
-    parse_bgp_nlri_vpnv4_prefix,
+    get_parse_context, many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
+    parse_bgp_nlri_vpnv4_prefix, Afi, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi,
+    Vpnv4Net,
 };
 use ipnet::Ipv6Net;
 use nom::{
-    IResult,
     bytes::complete::take,
-    error::{ErrorKind, make_error},
-    number::complete::{be_u8, be_u24, be_u32, be_u128},
+    error::{make_error, ErrorKind},
+    number::complete::{be_u128, be_u24, be_u32, be_u8},
+    IResult,
 };
 use nom_derive::*;
 
@@ -137,14 +137,16 @@ pub fn parse_evpn_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], EvpnRoute
             let (input, mac_len) = be_u8(input)?;
             let mac_size = nlri_psize(mac_len);
             if mac_size != 6 {
-                return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+                return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
             }
             let (input, mac) = take(6usize).parse(input)?;
             let (input, ip_len) = be_u8(input)?;
             let ip_size = nlri_psize(ip_len);
-            if ip_size != 0 {
-                // TODO parse IP address.
-            }
+            let (input, _) = if ip_size != 0 {
+                take(ip_size).parse(input)?
+            } else {
+                (input, &[] as &[u8])
+            };
             let (input, vni) = be_u24(input)?;
 
             let mut evpn = EvpnMac {
@@ -172,7 +174,7 @@ pub fn parse_evpn_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], EvpnRoute
 
             Ok((input, EvpnRoute::Multicast(evpn)))
         }
-        _ => Err(nom::Err::Error(make_error(input, ErrorKind::Tag))),
+        _ => Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf))),
     }
 }
 
@@ -219,7 +221,7 @@ impl MpNlriReachAttr {
         }
         if header.afi == Afi::Ip6 && header.safi == Safi::Unicast {
             if header.nhop_len != 16 {
-                return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+                return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
             }
             let (input, nhop) = be_u128(input)?;
             let nhop: Ipv6Addr = Ipv6Addr::from(nhop);
@@ -236,7 +238,7 @@ impl MpNlriReachAttr {
         if header.afi == Afi::L2vpn && header.safi == Safi::Evpn {
             // Nexthop can be IPv4 or IPv6 address.
             if header.nhop_len != 4 && header.nhop_len != 16 {
-                return Err(nom::Err::Error(make_error(input, ErrorKind::Tag)));
+                return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
             }
             let (input, nhop) = be_u128(input)?;
             let nhop: Ipv6Addr = Ipv6Addr::from(nhop);
@@ -253,7 +255,7 @@ impl MpNlriReachAttr {
             };
             return Ok((input, mp_nlri));
         }
-        Err(nom::Err::Error(make_error(input, ErrorKind::Tag)))
+        Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf)))
     }
 }
 
@@ -322,7 +324,7 @@ impl MpNlriUnreachAttr {
             };
             return Ok((input, mp_nlri));
         }
-        Err(nom::Err::Error(make_error(input, ErrorKind::Tag)))
+        Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf)))
     }
 }
 
