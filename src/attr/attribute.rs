@@ -1,5 +1,5 @@
 use std::fmt;
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use crate::{
     get_parse_context, many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
@@ -31,8 +31,8 @@ pub struct MpNlriUnreachHeader {
 #[derive(Clone, Debug, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
+    pub nexthop: Option<IpAddr>,
     pub ipv6_prefix: Vec<Ipv6Nlri>,
-    pub ipv6_nexthop: Option<Ipv6Addr>,
     pub vpnv4_prefix: Vec<Vpnv4Net>,
     pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
     pub evpn_prefix: Vec<EvpnRoute>,
@@ -224,13 +224,13 @@ impl MpNlriReachAttr {
                 return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
             }
             let (input, nhop) = be_u128(input)?;
-            let nhop: Ipv6Addr = Ipv6Addr::from(nhop);
+            let nhop = IpAddr::V6(Ipv6Addr::from(nhop));
             let (input, snpa) = be_u8(input)?;
             let (_, updates) = many0(|i| parse_bgp_nlri_ipv6_prefix(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 snpa,
+                nexthop: Some(nhop),
                 ipv6_prefix: updates,
-                ipv6_nexthop: Some(nhop),
                 ..Default::default()
             };
             return Ok((input, mp_nlri));
@@ -240,8 +240,15 @@ impl MpNlriReachAttr {
             if header.nhop_len != 4 && header.nhop_len != 16 {
                 return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
             }
-            let (input, nhop) = be_u128(input)?;
-            let nhop: Ipv6Addr = Ipv6Addr::from(nhop);
+            let (input, nhop) = if header.nhop_len == 4 {
+                let (input, addr) = be_u32(input)?;
+                let nhop: IpAddr = IpAddr::V4(Ipv4Addr::from(addr));
+                (input, nhop)
+            } else {
+                let (input, addr) = be_u128(input)?;
+                let nhop: IpAddr = IpAddr::V6(Ipv6Addr::from(addr));
+                (input, nhop)
+            };
             let (input, snpa) = be_u8(input)?;
 
             // EVPN
@@ -249,7 +256,7 @@ impl MpNlriReachAttr {
 
             let mp_nlri = MpNlriReachAttr {
                 snpa,
-                ipv6_nexthop: Some(nhop),
+                nexthop: Some(nhop),
                 evpn_prefix: evpns,
                 ..Default::default()
             };
