@@ -31,3 +31,9 @@ pub use error::*;
 
 pub mod label;
 pub use label::*;
+
+pub mod bgp_attr;
+pub use bgp_attr::*;
+
+pub mod bgp_nexthop;
+pub use bgp_nexthop::*;

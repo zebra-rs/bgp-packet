@@ -1,8 +1,8 @@
 use std::fmt;
 
 use bytes::{BufMut, BytesMut};
-use nom::IResult;
 use nom::number::complete::{be_u16, be_u32};
+use nom::IResult;
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};

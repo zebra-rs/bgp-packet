@@ -95,18 +95,16 @@ impl LargeCommunityValue {
 
     fn from_str(s: &str) -> Option<Self> {
         let com_strs: Vec<&str> = s.split(':').collect();
-        if com_strs.len() == 3 {
-            if let Ok(global) = com_strs[0].parse::<u32>() {
-                if let Ok(local1) = com_strs[1].parse::<u32>() {
-                    if let Ok(local2) = com_strs[2].parse::<u32>() {
-                        return Some(Self {
-                            global,
-                            local1,
-                            local2,
-                        });
-                    }
-                }
-            }
+        if com_strs.len() == 3
+            && let Ok(global) = com_strs[0].parse::<u32>()
+            && let Ok(local1) = com_strs[1].parse::<u32>()
+            && let Ok(local2) = com_strs[2].parse::<u32>()
+        {
+            return Some(Self {
+                global,
+                local1,
+                local2,
+            });
         }
         None
     }

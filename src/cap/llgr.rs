@@ -2,8 +2,8 @@ use std::fmt;
 
 use bitfield_struct::bitfield;
 use bytes::{BufMut, BytesMut};
+use nom::number::complete::{be_u24, be_u8};
 use nom::IResult;
-use nom::number::complete::{be_u8, be_u24};
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};

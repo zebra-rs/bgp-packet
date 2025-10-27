@@ -14,10 +14,10 @@ fn str2as(s: &str) -> Option<u32> {
     match strs.len() {
         // ASN.ASN format.
         2 => {
-            if let Ok(hval) = strs[0].parse::<u16>() {
-                if let Ok(lval) = strs[1].parse::<u16>() {
-                    return Some(u32::from(hval) << 16 | u32::from(lval));
-                }
+            if let Ok(hval) = strs[0].parse::<u16>()
+                && let Ok(lval) = strs[1].parse::<u16>()
+            {
+                return Some(u32::from(hval) << 16 | u32::from(lval));
             }
             None
         }

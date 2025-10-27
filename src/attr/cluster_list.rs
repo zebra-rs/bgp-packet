@@ -3,11 +3,11 @@ use std::net::Ipv4Addr;
 
 use bytes::{BufMut, BytesMut};
 use itertools::Itertools;
+use nom::number::complete::be_u32;
 use nom::IResult;
 use nom::Parser;
-use nom::number::complete::be_u32;
 
-use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe, many0};
+use crate::{many0, AttrEmitter, AttrFlags, AttrType, ParseBe};
 
 #[derive(Clone, Default)]
 pub struct ClusterList {

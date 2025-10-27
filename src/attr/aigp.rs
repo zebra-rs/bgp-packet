@@ -2,8 +2,8 @@ use std::fmt;
 
 use bytes::{BufMut, BytesMut};
 use nom::{
-    error::{ErrorKind, make_error},
-    number::complete::{be_u8, be_u16, be_u64},
+    error::{make_error, ErrorKind},
+    number::complete::{be_u16, be_u64, be_u8},
 };
 use nom_derive::*;
 
