@@ -37,23 +37,23 @@ impl FromStr for RouteDistinguisher {
         }
         // A 16-bit autonomous system number, a colon, and a 32-bit number, for
         // example: 65000:3
-        if let Ok(addr) = strs[0].parse::<Ipv4Addr>() {
-            if let Ok(val) = strs[1].parse::<u16>() {
-                let mut rd = RouteDistinguisher::new(RouteDistinguisherType::IP);
-                rd.val[0..4].copy_from_slice(&addr.octets());
-                rd.val[4..6].copy_from_slice(&val.to_be_bytes());
-                return Ok(rd);
-            }
+        if let Ok(addr) = strs[0].parse::<Ipv4Addr>()
+            && let Ok(val) = strs[1].parse::<u16>()
+        {
+            let mut rd = RouteDistinguisher::new(RouteDistinguisherType::IP);
+            rd.val[0..4].copy_from_slice(&addr.octets());
+            rd.val[4..6].copy_from_slice(&val.to_be_bytes());
+            return Ok(rd);
         }
         // A 32-bit IP address, a colon, and a 16-bit number, for example:
         // 192.168.1.2:51
-        if let Ok(asn) = strs[0].parse::<u16>() {
-            if let Ok(val) = strs[1].parse::<u32>() {
-                let mut rd = RouteDistinguisher::new(RouteDistinguisherType::ASN);
-                rd.val[0..2].copy_from_slice(&asn.to_be_bytes());
-                rd.val[2..6].copy_from_slice(&val.to_be_bytes());
-                return Ok(rd);
-            }
+        if let Ok(asn) = strs[0].parse::<u16>()
+            && let Ok(val) = strs[1].parse::<u32>()
+        {
+            let mut rd = RouteDistinguisher::new(RouteDistinguisherType::ASN);
+            rd.val[0..2].copy_from_slice(&asn.to_be_bytes());
+            rd.val[2..6].copy_from_slice(&val.to_be_bytes());
+            return Ok(rd);
         }
         Err(())
     }

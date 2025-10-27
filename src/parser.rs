@@ -2,15 +2,8 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::fmt;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
-use crate::error::BgpParseError;
-
-use super::attr::{
-    Aggregator, Aggregator2, Aigp, As2Path, As4Path, AtomicAggregate, AttributeFlags, Community,
-    ExtCommunity, LargeCommunity, LocalPref, Med, MpNlriReachAttr, NexthopAttr, Origin,
-    RouteDistinguisher,
-};
-use super::*;
 use bytes::BytesMut;
 use ipnet::{Ipv4Net, Ipv6Net};
 use nom::IResult;
@@ -19,7 +12,8 @@ use nom::combinator::peek;
 use nom::error::{ErrorKind, make_error};
 use nom::number::complete::{be_u8, be_u16, be_u32};
 use nom_derive::*;
-use std::net::{Ipv4Addr, Ipv6Addr};
+
+use crate::*;
 
 #[repr(u8)]
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -447,7 +441,7 @@ pub fn peek_bgp_length(input: &[u8]) -> usize {
 }
 
 thread_local! {
-    static PARSE_CONTEXT: RefCell<Option<ParseOption>> = RefCell::new(None);
+    static PARSE_CONTEXT: RefCell<Option<ParseOption>> = const { RefCell::new(None) };
 }
 
 pub fn set_parse_context(opt: Option<ParseOption>) {
@@ -481,7 +475,7 @@ impl ParseOption {
 
     pub fn is_add_path_recv(&self, afi: Afi, safi: Safi) -> bool {
         let key = AfiSafi { afi, safi };
-        self.add_path.get(&key).map_or(false, |direct| direct.recv)
+        self.add_path.get(&key).is_some_and(|direct| direct.recv)
     }
 
     pub fn clear(&mut self) {

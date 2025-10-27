@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{Attr, Ipv4Nlri};
 
-use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
+use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
 use nom_derive::*;
 
 #[derive(NomBE)]

@@ -191,10 +191,7 @@ impl fmt::Display for Vpnv4Nexthop {
 }
 
 impl MpNlriReachAttr {
-    pub fn parse_be_with_opt<'a>(
-        input: &'a [u8],
-        opt: Option<ParseOption>,
-    ) -> nom::IResult<&'a [u8], Self> {
+    pub fn parse_be_with_opt(input: &[u8], opt: Option<ParseOption>) -> nom::IResult<&[u8], Self> {
         if input.len() < size_of::<MpNlriReachHeader>() {
             return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
         }
@@ -267,10 +264,7 @@ impl MpNlriReachAttr {
 }
 
 impl MpNlriUnreachAttr {
-    pub fn parse_be_with_opt<'a>(
-        input: &'a [u8],
-        opt: Option<ParseOption>,
-    ) -> nom::IResult<&'a [u8], Self> {
+    pub fn parse_be_with_opt(input: &[u8], opt: Option<ParseOption>) -> nom::IResult<&[u8], Self> {
         // AFI + SAFI = 3.
         if input.len() < 3 {
             return Err(nom::Err::Error(nom::error::Error::new(

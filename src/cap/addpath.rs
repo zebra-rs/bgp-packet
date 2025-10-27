@@ -2,7 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use bytes::{BufMut, BytesMut};
-use nom::{IResult, number::complete::be_u8};
+use nom::{number::complete::be_u8, IResult};
 use nom_derive::*;
 
 use super::{CapabilityCode, Emit};

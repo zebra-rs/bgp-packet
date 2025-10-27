@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
-use nom::{IResult, number::complete::be_u8};
+use super::{BgpHeader, BgpType, BGP_HEADER_LEN};
+use nom::{number::complete::be_u8, IResult};
 use nom_derive::*;
 use serde::Serialize;
 
