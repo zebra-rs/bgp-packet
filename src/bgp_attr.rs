@@ -40,7 +40,8 @@ pub struct BgpAttr {
 impl BgpAttr {
     pub fn new() -> Self {
         BgpAttr {
-            origin: Some(Origin::Igp),
+            origin: Some(Origin::default()),
+            aspath: Some(As4Path::default()),
             ..Default::default()
         }
     }

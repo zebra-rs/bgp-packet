@@ -1,8 +1,8 @@
 use std::fmt;
 
 use bytes::{BufMut, BytesMut};
-use nom::number::complete::be_u8;
 use nom::IResult;
+use nom::number::complete::be_u8;
 use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
@@ -14,6 +14,12 @@ pub enum Origin {
     Igp = 0,        // IGP (lowest preference)
     Egp = 1,        // EGP
     Incomplete = 2, // Incomplete (highest preference)
+}
+
+impl Default for Origin {
+    fn default() -> Self {
+        Origin::Igp
+    }
 }
 
 impl From<Origin> for u8 {

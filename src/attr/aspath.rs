@@ -1,15 +1,15 @@
 use bytes::{BufMut, BytesMut};
+use nom::IResult;
 use nom::multi::count;
 use nom::number::complete::{be_u16, be_u32};
-use nom::IResult;
 use nom_derive::*;
 use std::collections::VecDeque;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::{many0, AttrType, ParseBe};
+use crate::{AttrType, ParseBe, many0};
 
-use super::aspath_token::{tokenizer, Token};
+use super::aspath_token::{Token, tokenizer};
 use super::{AttrEmitter, AttrFlags};
 
 pub const AS_SET: u8 = 1;
@@ -263,6 +263,16 @@ impl As4Path {
         }
     }
 
+    // New As4Path with given asn as default values.
+    pub fn from(asn: Vec<u32>) -> Self {
+        let length = asn.len() as u32;
+        let seg = As4Segment { typ: AS_SEQ, asn };
+        As4Path {
+            segs: VecDeque::from(vec![seg]),
+            length,
+        }
+    }
+
     /// Calculate AS Path length from segments according to RFC 4271 and RFC 5065.
     fn calculate_length(&self) -> u32 {
         self.segs
@@ -456,5 +466,38 @@ mod tests {
         // Large AS_SET still counts as 1
         let aspath: As4Path = As4Path::from_str("1 {2 3 4 5 6 7 8 9 10} 11").unwrap();
         assert_eq!(aspath.length(), 3); // 1 + 1 (set) + 11 = 3
+    }
+
+    #[test]
+    fn from_empty() {
+        let aspath = As4Path::from(vec![]);
+        assert_eq!(aspath.to_string(), "");
+        assert_eq!(aspath.length(), 0);
+        assert_eq!(aspath.segs.len(), 1);
+    }
+
+    #[test]
+    fn from_single() {
+        let aspath = As4Path::from(vec![100]);
+        assert_eq!(aspath.to_string(), "100");
+        assert_eq!(aspath.length(), 1);
+        assert_eq!(aspath.segs.len(), 1);
+        assert_eq!(aspath.segs.front().unwrap().typ, AS_SEQ);
+    }
+
+    #[test]
+    fn from_multiple() {
+        let aspath = As4Path::from(vec![100, 200, 300]);
+        assert_eq!(aspath.to_string(), "100 200 300");
+        assert_eq!(aspath.length(), 3);
+        assert_eq!(aspath.segs.len(), 1);
+        assert_eq!(aspath.segs.front().unwrap().typ, AS_SEQ);
+    }
+
+    #[test]
+    fn from_large_asn() {
+        let aspath = As4Path::from(vec![65536, 4294967295]);
+        assert_eq!(aspath.to_string(), "1.0 65535.65535");
+        assert_eq!(aspath.length(), 2);
     }
 }
