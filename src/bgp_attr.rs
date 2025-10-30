@@ -13,11 +13,11 @@ pub struct BgpAttr {
     /// Nexthop
     pub nexthop: Option<BgpNexthop>,
     /// Multi-Exit Discriminator
-    pub med: Option<u32>,
+    pub med: Option<Med>,
     /// Local preference (IBGP only)
-    pub local_pref: Option<u32>,
+    pub local_pref: Option<LocalPref>,
     /// Atomic Aggregate
-    pub atomic_aggregate: Option<bool>,
+    pub atomic_aggregate: Option<AtomicAggregate>,
     /// Aggregator.
     pub aggregator: Option<Aggregator>,
     /// Community
@@ -42,8 +42,14 @@ impl BgpAttr {
         BgpAttr {
             origin: Some(Origin::default()),
             aspath: Some(As4Path::default()),
+            med: Some(Med::default()),
             ..Default::default()
         }
+    }
+
+    pub fn to(&self) -> Vec<Attr> {
+        // TODO:  Convert BgpAttr to Vec<Attr>
+        vec![]
     }
 
     pub fn from(attrs: &[Attr]) -> Self {
@@ -64,13 +70,13 @@ impl BgpAttr {
                     bgp_attr.nexthop = Some(BgpNexthop::Ipv4(v.nexthop));
                 }
                 Attr::Med(v) => {
-                    bgp_attr.med = Some(v.med);
+                    bgp_attr.med = Some(v.clone());
                 }
                 Attr::LocalPref(v) => {
-                    bgp_attr.local_pref = Some(v.local_pref);
+                    bgp_attr.local_pref = Some(v.clone());
                 }
-                Attr::AtomicAggregate(_v) => {
-                    bgp_attr.atomic_aggregate = Some(true);
+                Attr::AtomicAggregate(v) => {
+                    bgp_attr.atomic_aggregate = Some(v.clone());
                 }
                 Attr::Aggregator(v) => {
                     bgp_attr.aggregator = Some(v.clone());
