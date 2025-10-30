@@ -13,11 +13,11 @@ pub struct BgpAttr {
     /// Nexthop
     pub nexthop: Option<BgpNexthop>,
     /// Multi-Exit Discriminator
-    pub med: Option<u32>,
+    pub med: Option<Med>,
     /// Local preference (IBGP only)
-    pub local_pref: Option<u32>,
+    pub local_pref: Option<LocalPref>,
     /// Atomic Aggregate
-    pub atomic_aggregate: Option<bool>,
+    pub atomic_aggregate: Option<AtomicAggregate>,
     /// Aggregator.
     pub aggregator: Option<Aggregator>,
     /// Community
@@ -42,8 +42,65 @@ impl BgpAttr {
         BgpAttr {
             origin: Some(Origin::default()),
             aspath: Some(As4Path::default()),
+            med: Some(Med::default()),
             ..Default::default()
         }
+    }
+
+    pub fn to(&self) -> Vec<Attr> {
+        let mut attrs = Vec::new();
+
+        if let Some(v) = &self.origin {
+            attrs.push(Attr::Origin(*v));
+        }
+        if let Some(v) = &self.aspath {
+            attrs.push(Attr::As4Path(v.clone()));
+        }
+        if let Some(v) = &self.nexthop {
+            match v {
+                BgpNexthop::Ipv4(addr) => {
+                    attrs.push(Attr::NextHop(NexthopAttr { nexthop: *addr }));
+                }
+                BgpNexthop::Vpnv4(_) => {
+                    // VPNv4 nexthop is handled via MpReachNlri, not NextHop attribute
+                }
+            }
+        }
+        if let Some(v) = &self.med {
+            attrs.push(Attr::Med(v.clone()));
+        }
+        if let Some(v) = &self.local_pref {
+            attrs.push(Attr::LocalPref(v.clone()));
+        }
+        if let Some(v) = &self.atomic_aggregate {
+            attrs.push(Attr::AtomicAggregate(v.clone()));
+        }
+        if let Some(v) = &self.aggregator {
+            attrs.push(Attr::Aggregator(v.clone()));
+        }
+        if let Some(v) = &self.com {
+            attrs.push(Attr::Community(v.clone()));
+        }
+        if let Some(v) = &self.originator_id {
+            attrs.push(Attr::OriginatorId(v.clone()));
+        }
+        if let Some(v) = &self.cluster_list {
+            attrs.push(Attr::ClusterList(v.clone()));
+        }
+        if let Some(v) = &self.ecom {
+            attrs.push(Attr::ExtendedCom(v.clone()));
+        }
+        if let Some(v) = &self.pmsi_tunnel {
+            attrs.push(Attr::PmsiTunnel(v.clone()));
+        }
+        if let Some(v) = &self.aigp {
+            attrs.push(Attr::Aigp(Aigp { aigp: *v }));
+        }
+        if let Some(v) = &self.lcom {
+            attrs.push(Attr::LargeCom(v.clone()));
+        }
+
+        attrs
     }
 
     pub fn from(attrs: &[Attr]) -> Self {
@@ -64,13 +121,13 @@ impl BgpAttr {
                     bgp_attr.nexthop = Some(BgpNexthop::Ipv4(v.nexthop));
                 }
                 Attr::Med(v) => {
-                    bgp_attr.med = Some(v.med);
+                    bgp_attr.med = Some(v.clone());
                 }
                 Attr::LocalPref(v) => {
-                    bgp_attr.local_pref = Some(v.local_pref);
+                    bgp_attr.local_pref = Some(v.clone());
                 }
-                Attr::AtomicAggregate(_v) => {
-                    bgp_attr.atomic_aggregate = Some(true);
+                Attr::AtomicAggregate(v) => {
+                    bgp_attr.atomic_aggregate = Some(v.clone());
                 }
                 Attr::Aggregator(v) => {
                     bgp_attr.aggregator = Some(v.clone());
@@ -165,5 +222,67 @@ impl fmt::Display for BgpAttr {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::Ipv4Addr;
+
+    #[test]
+    fn test_bgp_attr_to_from_roundtrip() {
+        // Create a BgpAttr with various attributes
+        let mut bgp_attr = BgpAttr::new();
+        bgp_attr.nexthop = Some(BgpNexthop::Ipv4(Ipv4Addr::new(192, 168, 1, 1)));
+        bgp_attr.local_pref = Some(LocalPref { local_pref: 100 });
+        bgp_attr.com = Some(Community(vec![
+            CommunityValue::from_readable_str("100:200").unwrap().0,
+        ]));
+
+        // Convert to Vec<Attr>
+        let attrs = bgp_attr.to();
+
+        // Verify we have the expected attributes
+        assert!(attrs.iter().any(|a| matches!(a, Attr::Origin(_))));
+        assert!(attrs.iter().any(|a| matches!(a, Attr::As4Path(_))));
+        assert!(attrs.iter().any(|a| matches!(a, Attr::NextHop(_))));
+        assert!(attrs.iter().any(|a| matches!(a, Attr::Med(_))));
+        assert!(attrs.iter().any(|a| matches!(a, Attr::LocalPref(_))));
+        assert!(attrs.iter().any(|a| matches!(a, Attr::Community(_))));
+
+        // Convert back to BgpAttr
+        let bgp_attr2 = BgpAttr::from(&attrs);
+
+        // Verify round-trip
+        assert_eq!(
+            bgp_attr.origin.unwrap().to_string(),
+            bgp_attr2.origin.unwrap().to_string()
+        );
+        assert_eq!(
+            bgp_attr.aspath.as_ref().unwrap().to_string(),
+            bgp_attr2.aspath.as_ref().unwrap().to_string()
+        );
+        assert_eq!(
+            bgp_attr.local_pref.as_ref().unwrap().local_pref,
+            bgp_attr2.local_pref.as_ref().unwrap().local_pref
+        );
+    }
+
+    #[test]
+    fn test_bgp_attr_new() {
+        let bgp_attr = BgpAttr::new();
+        assert!(bgp_attr.origin.is_some());
+        assert!(bgp_attr.aspath.is_some());
+        assert!(bgp_attr.med.is_some());
+        assert_eq!(bgp_attr.origin.unwrap(), Origin::Igp);
+        assert_eq!(bgp_attr.aspath.unwrap().length(), 0);
+    }
+
+    #[test]
+    fn test_bgp_attr_to_empty() {
+        let bgp_attr = BgpAttr::default();
+        let attrs = bgp_attr.to();
+        assert_eq!(attrs.len(), 0);
     }
 }

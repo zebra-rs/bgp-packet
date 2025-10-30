@@ -1,4 +1,4 @@
-use nom::{error::ParseError, IResult};
+use nom::{IResult, error::ParseError};
 
 // many0 which avoid passing empty input to the parser.
 pub fn many0<'a, O, E: ParseError<&'a [u8]>>(

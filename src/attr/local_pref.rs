@@ -11,8 +11,18 @@ pub struct LocalPref {
 }
 
 impl LocalPref {
+    pub const DEFAULT: u32 = 100;
+
     pub fn new(local_pref: u32) -> Self {
         Self { local_pref }
+    }
+}
+
+impl Default for LocalPref {
+    fn default() -> Self {
+        Self {
+            local_pref: Self::DEFAULT,
+        }
     }
 }
 
