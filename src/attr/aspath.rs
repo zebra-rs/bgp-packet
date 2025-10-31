@@ -314,6 +314,43 @@ impl As4Path {
         self.concatenate_paths(other)
     }
 
+    /// Prepend an AS path to this path (modifies self in place).
+    /// Modifies `self` by prepending `other` to it.
+    pub fn prepend_mut(&mut self, other: Self) {
+        // Handle empty paths
+        if self.segs.is_empty() {
+            *self = other;
+            return;
+        }
+        if other.segs.is_empty() {
+            return;
+        }
+
+        // Try to merge if both paths have a single AS_SEQ segment
+        if self.segs.len() == 1 && other.segs.len() == 1 {
+            if let (Some(self_seg), Some(other_seg)) = (self.segs.front(), other.segs.front()) {
+                if self_seg.typ == AS_SEQ && other_seg.typ == AS_SEQ {
+                    // Merge the two AS_SEQ segments
+                    let mut merged_asn = other_seg.asn.clone();
+                    merged_asn.extend(&self_seg.asn);
+                    self.segs.clear();
+                    self.segs.push_back(As4Segment {
+                        typ: AS_SEQ,
+                        asn: merged_asn,
+                    });
+                    self.update_length();
+                    return;
+                }
+            }
+        }
+
+        // Default: concatenate segments
+        let mut new_segs = other.segs.clone();
+        new_segs.extend(self.segs.clone());
+        self.segs = new_segs;
+        self.update_length();
+    }
+
     /// Try to merge two single-segment AS_SEQ paths into one segment.
     fn try_merge_single_seq(&self, other: &Self) -> Option<Self> {
         if self.segs.len() != 1 || other.segs.len() != 1 {
@@ -499,5 +536,56 @@ mod tests {
         let aspath = As4Path::from(vec![65536, 4294967295]);
         assert_eq!(aspath.to_string(), "1.0 65535.65535");
         assert_eq!(aspath.length(), 2);
+    }
+
+    #[test]
+    fn prepend_mut_basic() {
+        let mut aspath: As4Path = As4Path::from_str("10 11 12").unwrap();
+        let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
+        aspath.prepend_mut(prepend);
+        assert_eq!(aspath.to_string(), "1 2 3 10 11 12");
+        assert_eq!(aspath.length(), 6);
+    }
+
+    #[test]
+    fn prepend_mut_empty() {
+        let mut aspath: As4Path = As4Path::new();
+        let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
+        aspath.prepend_mut(prepend);
+        assert_eq!(aspath.to_string(), "1 2 3");
+        assert_eq!(aspath.length(), 3);
+
+        let mut aspath: As4Path = As4Path::from_str("1 2 3").unwrap();
+        let prepend: As4Path = As4Path::new();
+        aspath.prepend_mut(prepend);
+        assert_eq!(aspath.to_string(), "1 2 3");
+        assert_eq!(aspath.length(), 3);
+    }
+
+    #[test]
+    fn prepend_mut_merge() {
+        // Test merging two single AS_SEQ segments
+        let mut aspath: As4Path = As4Path::from_str("10 11 12").unwrap();
+        let prepend: As4Path = As4Path::from_str("1 2 3").unwrap();
+        aspath.prepend_mut(prepend);
+        assert_eq!(aspath.to_string(), "1 2 3 10 11 12");
+        assert_eq!(aspath.length(), 6);
+        assert_eq!(aspath.segs.len(), 1); // Should be merged into single segment
+    }
+
+    #[test]
+    fn prepend_mut_no_merge() {
+        // Test concatenation when segments can't be merged
+        let mut aspath: As4Path = As4Path::from_str("1").unwrap();
+        let prepend: As4Path = As4Path::from_str("{1} 2 3").unwrap();
+        aspath.prepend_mut(prepend);
+        assert_eq!(aspath.to_string(), "{1} 2 3 1");
+        assert_eq!(aspath.length(), 4);
+
+        let mut aspath: As4Path = As4Path::from_str("1 {2}").unwrap();
+        let prepend: As4Path = As4Path::from_str("2 {3} 4 5").unwrap();
+        aspath.prepend_mut(prepend);
+        assert_eq!(aspath.to_string(), "2 {3} 4 5 1 {2}");
+        assert_eq!(aspath.length(), 6);
     }
 }
