@@ -25,7 +25,7 @@ pub mod dynamic;
 pub use dynamic::CapabilityDynamicCapability;
 
 pub mod addpath;
-pub use addpath::CapabilityAddPath;
+pub use addpath::{AddPathValue, CapabilityAddPath};
 
 pub mod llgr;
 pub use llgr::CapabilityLlgr;

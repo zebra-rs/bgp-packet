@@ -56,12 +56,17 @@ impl From<UpdatePacket> for BytesMut {
         let header: BytesMut = update.header.into();
         buf.put(&header[..]);
 
-        // Withdraw.
-        if update.ipv4_withdraw.is_empty() {
-            buf.put_u16(0u16);
-        } else {
-            return buf;
+        // IPv4 unicast withdraw.
+        let withdraw_len_pos = buf.len();
+        buf.put_u16(0u16); // Placeholder.
+        let withdraw_pos: std::ops::Range<usize> = withdraw_len_pos..withdraw_len_pos + 2;
+        for ip in update.ipv4_withdraw.iter() {
+            buf.put_u8(ip.prefix.prefix_len());
+            let plen = nlri_psize(ip.prefix.prefix_len());
+            buf.put(&ip.prefix.addr().octets()[0..plen]);
         }
+        let withdraw_len: u16 = (buf.len() - withdraw_len_pos - 2) as u16;
+        buf[withdraw_pos].copy_from_slice(&withdraw_len.to_be_bytes());
 
         // Attributes.
         let attr_len_pos = buf.len();
@@ -74,7 +79,7 @@ impl From<UpdatePacket> for BytesMut {
         let attr_len: u16 = (buf.len() - attr_len_pos - 2) as u16;
         buf[attr_pos].copy_from_slice(&attr_len.to_be_bytes());
 
-        // NLRI.
+        // IPv4 unicast update.
         for ip in update.ipv4_update.iter() {
             buf.put_u8(ip.prefix.prefix_len());
             let plen = nlri_psize(ip.prefix.prefix_len());
