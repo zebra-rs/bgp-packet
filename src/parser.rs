@@ -348,10 +348,9 @@ fn parse_bgp_nlri_ipv4(input: &[u8], length: u16, add_path: bool) -> IResult<&[u
 
 #[derive(Debug, Clone)]
 pub struct Vpnv4Net {
-    pub id: u32,
     pub label: Label,
     pub rd: RouteDistinguisher,
-    pub prefix: Ipv4Net,
+    pub nlri: Ipv4Nlri,
 }
 
 impl fmt::Display for Vpnv4Net {
@@ -360,7 +359,7 @@ impl fmt::Display for Vpnv4Net {
         write!(
             f,
             "VPNv4 [{}]:[{}]{} label: {} {}",
-            self.rd, self.id, self.prefix, self.label.label, bos,
+            self.rd, self.nlri.id, self.nlri.prefix, self.label.label, bos,
         )
     }
 }
@@ -391,12 +390,9 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8
     let (input, _) = take(psize).parse(input)?;
     let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net create error");
 
-    let vpnv4 = Vpnv4Net {
-        id,
-        label,
-        rd,
-        prefix,
-    };
+    let nlri = Ipv4Nlri { id, prefix };
+
+    let vpnv4 = Vpnv4Net { label, rd, nlri };
 
     Ok((input, vpnv4))
 }
