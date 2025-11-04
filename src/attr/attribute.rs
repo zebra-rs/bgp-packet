@@ -2,7 +2,7 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    Afi, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi, Vpnv4Net, get_parse_context,
+    Afi, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi, Vpnv4Nlri, get_parse_context,
     many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
     parse_bgp_nlri_vpnv4_prefix,
 };
@@ -33,7 +33,7 @@ pub struct MpNlriReachAttr {
     pub snpa: u8,
     pub nexthop: Option<IpAddr>,
     pub ipv6_prefix: Vec<Ipv6Nlri>,
-    pub vpnv4_prefix: Vec<Vpnv4Net>,
+    pub vpnv4_prefix: Vec<Vpnv4Nlri>,
     pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
     pub evpn_prefix: Vec<EvpnRoute>,
 }
@@ -42,7 +42,7 @@ pub struct MpNlriReachAttr {
 pub struct MpNlriUnreachAttr {
     pub ipv6_prefix: Vec<Ipv6Nlri>,
     pub ipv6_eor: bool,
-    pub vpnv4_prefix: Vec<Vpnv4Net>,
+    pub vpnv4_prefix: Vec<Vpnv4Nlri>,
     pub vpnv4_eor: bool,
     pub evpn_prefix: Vec<EvpnRoute>,
     pub evpn_eor: bool,

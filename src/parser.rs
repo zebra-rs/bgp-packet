@@ -347,13 +347,13 @@ fn parse_bgp_nlri_ipv4(input: &[u8], length: u16, add_path: bool) -> IResult<&[u
 }
 
 #[derive(Debug, Clone)]
-pub struct Vpnv4Net {
+pub struct Vpnv4Nlri {
     pub label: Label,
     pub rd: RouteDistinguisher,
     pub nlri: Ipv4Nlri,
 }
 
-impl fmt::Display for Vpnv4Net {
+impl fmt::Display for Vpnv4Nlri {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let bos = if self.label.bos { "(BoS)" } else { "" };
         write!(
@@ -364,7 +364,7 @@ impl fmt::Display for Vpnv4Net {
     }
 }
 
-pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Vpnv4Net> {
+pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Vpnv4Nlri> {
     let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
 
     // MPLS Label (3 octets) + RD (8 octets) + IPv4 Prefix (0-4 octets).
@@ -392,7 +392,7 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8
 
     let nlri = Ipv4Nlri { id, prefix };
 
-    let vpnv4 = Vpnv4Net { label, rd, nlri };
+    let vpnv4 = Vpnv4Nlri { label, rd, nlri };
 
     Ok((input, vpnv4))
 }
