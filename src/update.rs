@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{Attr, Ipv4Nlri};
+use crate::{Attr, Ipv4Nlri, Vpnv4Nlri};
 
 use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
 use nom_derive::*;
@@ -14,6 +14,10 @@ pub struct UpdatePacket {
     pub ipv4_update: Vec<Ipv4Nlri>,
     #[nom(Ignore)]
     pub ipv4_withdraw: Vec<Ipv4Nlri>,
+    #[nom(Ignore)]
+    pub vpnv4_update: Vec<Vpnv4Nlri>,
+    #[nom(Ignore)]
+    pub vpnv4_withdraw: Vec<Vpnv4Nlri>,
     #[nom(Ignore)]
     pub add_path: bool,
 }
@@ -31,6 +35,8 @@ impl Default for UpdatePacket {
             attrs: Vec::new(),
             ipv4_update: Vec::new(),
             ipv4_withdraw: Vec::new(),
+            vpnv4_update: Vec::new(),
+            vpnv4_withdraw: Vec::new(),
             add_path: false,
         }
     }

@@ -1,6 +1,8 @@
+use std::net::Ipv4Addr;
+
 use bytes::{BufMut, BytesMut};
 
-use crate::nlri_psize;
+use crate::{Afi, AttrEmitter, AttrFlags, AttrType, Safi, Vpnv4Nlri, nlri_psize};
 
 use super::{BgpHeader, NotificationPacket, OpenPacket, UpdatePacket};
 
@@ -50,6 +52,91 @@ impl From<OpenPacket> for BytesMut {
     }
 }
 
+struct Vpnv4Reach {
+    pub update: Vec<Vpnv4Nlri>,
+}
+
+impl AttrEmitter for Vpnv4Reach {
+    fn attr_type(&self) -> AttrType {
+        AttrType::MpReachNlri
+    }
+
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_optional(true)
+    }
+
+    fn len(&self) -> Option<usize> {
+        None
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        // AFI/SAFI.
+        buf.put_u16(u16::from(Afi::Ip));
+        buf.put_u8(u8::from(Safi::MplsVpn));
+        // Nexthop
+        buf.put_u8(12); // Nexthop len
+        // Nexthop RD.
+        let rd = [0u8; 8];
+        buf.put(&rd[..]);
+        let nexthop: Ipv4Addr = Ipv4Addr::new(10, 0, 0, 1);
+        buf.put(&nexthop.octets()[..]);
+        // SNPA
+        buf.put_u8(0);
+        // Prefix.
+        for update in self.update.iter() {
+            // Plen
+            let plen = update.nlri.prefix.prefix_len() + 88;
+            buf.put_u8(plen);
+            // Label
+            buf.put(&update.label.to_bytes()[..]);
+            // RD
+            buf.put_u16(update.rd.typ.clone() as u16);
+            buf.put(&update.rd.val[..]);
+            // Prefix
+            let plen = nlri_psize(update.nlri.prefix.prefix_len());
+            buf.put(&update.nlri.prefix.addr().octets()[0..plen]);
+        }
+    }
+}
+
+struct Vpnv4Unreach {
+    pub withdraw: Vec<Vpnv4Nlri>,
+}
+
+impl AttrEmitter for Vpnv4Unreach {
+    fn attr_type(&self) -> AttrType {
+        AttrType::MpUnreachNlri
+    }
+
+    fn attr_flags(&self) -> AttrFlags {
+        AttrFlags::new().with_optional(true)
+    }
+
+    fn len(&self) -> Option<usize> {
+        None
+    }
+
+    fn emit(&self, buf: &mut BytesMut) {
+        // AFI/SAFI.
+        buf.put_u16(u16::from(Afi::Ip));
+        buf.put_u8(u8::from(Safi::MplsVpn));
+        // Prefix.
+        for withdraw in self.withdraw.iter() {
+            // Plen
+            let plen = withdraw.nlri.prefix.prefix_len() + 88;
+            buf.put_u8(plen);
+            // Label
+            buf.put(&withdraw.label.to_bytes()[..]);
+            // RD
+            buf.put_u16(withdraw.rd.typ.clone() as u16);
+            buf.put(&withdraw.rd.val[..]);
+            // Prefix
+            let plen = nlri_psize(withdraw.nlri.prefix.prefix_len());
+            buf.put(&withdraw.nlri.prefix.addr().octets()[0..plen]);
+        }
+    }
+}
+
 impl From<UpdatePacket> for BytesMut {
     fn from(update: UpdatePacket) -> Self {
         let mut buf = BytesMut::new();
@@ -76,6 +163,19 @@ impl From<UpdatePacket> for BytesMut {
         for attr in update.attrs.iter() {
             attr.emit(&mut buf);
         }
+        if update.vpnv4_update.len() > 0 {
+            let vpnv4 = Vpnv4Reach {
+                update: update.vpnv4_update,
+            };
+            vpnv4.attr_emit(&mut buf);
+        }
+        if update.vpnv4_withdraw.len() > 0 {
+            let vpnv4 = Vpnv4Unreach {
+                withdraw: update.vpnv4_withdraw,
+            };
+            vpnv4.attr_emit(&mut buf);
+        }
+
         let attr_len: u16 = (buf.len() - attr_len_pos - 2) as u16;
         buf[attr_pos].copy_from_slice(&attr_len.to_be_bytes());
 
