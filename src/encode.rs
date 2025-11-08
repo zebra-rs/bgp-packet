@@ -2,7 +2,7 @@ use std::net::Ipv4Addr;
 
 use bytes::{BufMut, BytesMut};
 
-use crate::{Afi, AttrEmitter, AttrFlags, AttrType, Safi, Vpnv4Nlri, nlri_psize};
+use crate::{Afi, AttrEmitter, AttrFlags, AttrType, Safi, Vpnv4Nexthop, Vpnv4Nlri, nlri_psize};
 
 use super::{BgpHeader, NotificationPacket, OpenPacket, UpdatePacket};
 
@@ -54,6 +54,7 @@ impl From<OpenPacket> for BytesMut {
 
 struct Vpnv4Reach {
     pub update: Vec<Vpnv4Nlri>,
+    pub nexthop: Option<Vpnv4Nexthop>,
 }
 
 impl AttrEmitter for Vpnv4Reach {
@@ -78,7 +79,11 @@ impl AttrEmitter for Vpnv4Reach {
         // Nexthop RD.
         let rd = [0u8; 8];
         buf.put(&rd[..]);
-        let nexthop: Ipv4Addr = Ipv4Addr::new(10, 0, 0, 1);
+        let nexthop: Ipv4Addr = if let Some(v) = &self.nexthop {
+            v.nhop
+        } else {
+            Ipv4Addr::UNSPECIFIED
+        };
         buf.put(&nexthop.octets()[..]);
         // SNPA
         buf.put_u8(0);
@@ -166,6 +171,7 @@ impl From<UpdatePacket> for BytesMut {
         if update.vpnv4_update.len() > 0 {
             let vpnv4 = Vpnv4Reach {
                 update: update.vpnv4_update,
+                nexthop: update.vpnv4_nexthop,
             };
             vpnv4.attr_emit(&mut buf);
         }
