@@ -287,7 +287,7 @@ impl MpNlriUnreachAttr {
                 return Ok((input, mp_nlri));
             }
             let (input, withdrawal) =
-                many0(|i| parse_bgp_nlri_vpnv4_prefix(i, add_path)).parse(input)?;
+                many0(|i| parse_bgp_nlri_vpnv4_prefix(i, false)).parse(input)?;
             let mp_nlri = MpNlriUnreachAttr {
                 vpnv4_prefix: withdrawal,
                 ..Default::default()
