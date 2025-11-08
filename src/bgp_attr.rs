@@ -144,8 +144,11 @@ impl BgpAttr {
                 Attr::ClusterList(v) => {
                     bgp_attr.cluster_list = Some(v.clone());
                 }
-                Attr::MpReachNlri(_v) => {
-                    // Ignore in attribute conversion.
+                Attr::MpReachNlri(v) => {
+                    // Handle nexthop.
+                    if let Some(ref nexthop) = v.vpnv4_nexthop {
+                        bgp_attr.nexthop = Some(BgpNexthop::Vpnv4(nexthop.clone()));
+                    }
                 }
                 Attr::MpUnreachNlri(_v) => {
                     // Ignore in attribute conversion.

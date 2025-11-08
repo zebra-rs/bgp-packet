@@ -180,8 +180,8 @@ pub fn parse_evpn_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], EvpnRoute
 
 #[derive(Debug, Clone)]
 pub struct Vpnv4Nexthop {
-    rd: RouteDistinguisher,
-    nhop: Ipv4Addr,
+    pub rd: RouteDistinguisher,
+    pub nhop: Ipv4Addr,
 }
 
 impl fmt::Display for Vpnv4Nexthop {
@@ -207,7 +207,7 @@ impl MpNlriReachAttr {
             let nhop: Ipv4Addr = Ipv4Addr::from(nhop);
             let nhop = Vpnv4Nexthop { rd, nhop };
             let (input, snpa) = be_u8(input)?;
-            let (_, updates) = many0(|i| parse_bgp_nlri_vpnv4_prefix(i, add_path)).parse(input)?;
+            let (_, updates) = many0(|i| parse_bgp_nlri_vpnv4_prefix(i, false)).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 snpa,
                 vpnv4_prefix: updates,

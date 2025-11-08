@@ -369,6 +369,7 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8
 
     // MPLS Label (3 octets) + RD (8 octets) + IPv4 Prefix (0-4 octets).
     let (input, mut plen) = be_u8(input)?;
+
     let psize = nlri_psize(plen);
     if input.len() < psize {
         return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
@@ -381,8 +382,24 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8
     let (input, rd) = RouteDistinguisher::parse_be(input)?;
 
     // Adjust plen to MPLS Label and Route Distinguisher.
+    if plen < 88 {
+        // Prefix length must be >= 88.
+        println!("plen < 88 {plen}");
+        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+    }
     plen -= 88;
     let psize = nlri_psize(plen);
+
+    if psize > 4 {
+        // Prefix size must be 0..=4.
+        println!("psize > 4 {psize}");
+        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+    }
+    if psize > input.len() {
+        println!("psize:{psize} > input.len():{}", input.len());
+        // Prefix size must be same or smaller than remaining input buffer.
+        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+    }
 
     // IPv4 prefix.
     let mut paddr = [0u8; 4];
