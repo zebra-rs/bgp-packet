@@ -207,7 +207,7 @@ impl MpNlriReachAttr {
             let nhop: Ipv4Addr = Ipv4Addr::from(nhop);
             let nhop = Vpnv4Nexthop { rd, nhop };
             let (input, snpa) = be_u8(input)?;
-            let (_, updates) = many0(|i| parse_bgp_nlri_vpnv4_prefix(i, false)).parse(input)?;
+            let (_, updates) = many0(|i| parse_bgp_nlri_vpnv4_prefix(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 snpa,
                 vpnv4_prefix: updates,
@@ -287,7 +287,7 @@ impl MpNlriUnreachAttr {
                 return Ok((input, mp_nlri));
             }
             let (input, withdrawal) =
-                many0(|i| parse_bgp_nlri_vpnv4_prefix(i, false)).parse(input)?;
+                many0(|i| parse_bgp_nlri_vpnv4_prefix(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriUnreachAttr {
                 vpnv4_prefix: withdrawal,
                 ..Default::default()
