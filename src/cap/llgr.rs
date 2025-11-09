@@ -48,6 +48,17 @@ pub struct LLGRValue {
     stale_time: u32,
 }
 
+impl LLGRValue {
+    pub fn new(afi: Afi, safi: Safi, stale_time: u32) -> Self {
+        Self {
+            afi,
+            safi,
+            flags: LLGRFlags::default(),
+            stale_time,
+        }
+    }
+}
+
 impl Emit for CapabilityLlgr {
     fn code(&self) -> CapabilityCode {
         CapabilityCode::Llgr
