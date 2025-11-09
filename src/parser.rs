@@ -384,7 +384,6 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8
     // Adjust plen to MPLS Label and Route Distinguisher.
     if plen < 88 {
         // Prefix length must be >= 88.
-        println!("plen < 88 {plen}");
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
     plen -= 88;
@@ -392,11 +391,9 @@ pub fn parse_bgp_nlri_vpnv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8
 
     if psize > 4 {
         // Prefix size must be 0..=4.
-        println!("psize > 4 {psize}");
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
     if psize > input.len() {
-        println!("psize:{psize} > input.len():{}", input.len());
         // Prefix size must be same or smaller than remaining input buffer.
         return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
     }
