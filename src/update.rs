@@ -21,6 +21,8 @@ pub struct UpdatePacket {
     #[nom(Ignore)]
     pub vpnv4_withdraw: Vec<Vpnv4Nlri>,
     #[nom(Ignore)]
+    pub vpnv4_eor: bool,
+    #[nom(Ignore)]
     pub add_path: bool,
 }
 
@@ -40,6 +42,7 @@ impl Default for UpdatePacket {
             vpnv4_update: Vec::new(),
             vpnv4_nexthop: None,
             vpnv4_withdraw: Vec::new(),
+            vpnv4_eor: false,
             add_path: false,
         }
     }

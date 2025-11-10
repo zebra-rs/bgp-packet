@@ -181,6 +181,10 @@ impl From<UpdatePacket> for BytesMut {
             };
             vpnv4.attr_emit(&mut buf);
         }
+        if update.vpnv4_eor {
+            let vpnv4 = Vpnv4Unreach { withdraw: vec![] };
+            vpnv4.attr_emit(&mut buf);
+        }
 
         let attr_len: u16 = (buf.len() - attr_len_pos - 2) as u16;
         buf[attr_pos].copy_from_slice(&attr_len.to_be_bytes());
