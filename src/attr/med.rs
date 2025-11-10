@@ -5,7 +5,7 @@ use nom_derive::*;
 
 use crate::{AttrEmitter, AttrFlags, AttrType};
 
-#[derive(Clone, NomBE, PartialEq, PartialOrd)]
+#[derive(Clone, NomBE, PartialEq, PartialOrd, Default)]
 pub struct Med {
     pub med: u32,
 }
@@ -13,12 +13,6 @@ pub struct Med {
 impl Med {
     pub fn new(med: u32) -> Self {
         Self { med }
-    }
-}
-
-impl Default for Med {
-    fn default() -> Self {
-        Self { med: 0 }
     }
 }
 

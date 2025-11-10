@@ -37,10 +37,6 @@ impl Label {
         Label { label, exp, bos }
     }
 
-    pub fn default() -> Self {
-        Self::new(0, 0, true)
-    }
-
     pub fn to_bytes(&self) -> [u8; 3] {
         let mut bytes = [0u8; 3];
         bytes[0] = ((self.label >> 12) & 0xFF) as u8;
@@ -53,5 +49,11 @@ impl Label {
 
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Label::from(bytes)
+    }
+}
+
+impl Default for Label {
+    fn default() -> Self {
+        Self::new(0, 0, true)
     }
 }
