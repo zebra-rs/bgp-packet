@@ -89,6 +89,10 @@ impl AttrEmitter for Vpnv4Reach {
         buf.put_u8(0);
         // Prefix.
         for update in self.update.iter() {
+            // AddPath
+            if update.nlri.id != 0 {
+                buf.put_u32(update.nlri.id);
+            }
             // Plen
             let plen = update.nlri.prefix.prefix_len() + 88;
             buf.put_u8(plen);
@@ -127,6 +131,10 @@ impl AttrEmitter for Vpnv4Unreach {
         buf.put_u8(u8::from(Safi::MplsVpn));
         // Prefix.
         for withdraw in self.withdraw.iter() {
+            // AddPath
+            if withdraw.nlri.id != 0 {
+                buf.put_u32(withdraw.nlri.id);
+            }
             // Plen
             let plen = withdraw.nlri.prefix.prefix_len() + 88;
             buf.put_u8(plen);
@@ -153,6 +161,9 @@ impl From<UpdatePacket> for BytesMut {
         buf.put_u16(0u16); // Placeholder.
         let withdraw_pos: std::ops::Range<usize> = withdraw_len_pos..withdraw_len_pos + 2;
         for ip in update.ipv4_withdraw.iter() {
+            if ip.id != 0 {
+                buf.put_u32(ip.id);
+            }
             buf.put_u8(ip.prefix.prefix_len());
             let plen = nlri_psize(ip.prefix.prefix_len());
             buf.put(&ip.prefix.addr().octets()[0..plen]);
@@ -191,6 +202,9 @@ impl From<UpdatePacket> for BytesMut {
 
         // IPv4 unicast update.
         for ip in update.ipv4_update.iter() {
+            if ip.id != 0 {
+                buf.put_u32(ip.id);
+            }
             buf.put_u8(ip.prefix.prefix_len());
             let plen = nlri_psize(ip.prefix.prefix_len());
             buf.put(&ip.prefix.addr().octets()[0..plen]);

@@ -488,6 +488,11 @@ impl ParseOption {
         self.add_path.get(&key).is_some_and(|direct| direct.recv)
     }
 
+    pub fn is_add_path_send(&self, afi: Afi, safi: Safi) -> bool {
+        let key = AfiSafi { afi, safi };
+        self.add_path.get(&key).is_some_and(|direct| direct.send)
+    }
+
     pub fn clear(&mut self) {
         self.as4 = Direct::default();
         self.add_path.clear();
