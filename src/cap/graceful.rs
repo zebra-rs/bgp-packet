@@ -5,9 +5,7 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{Afi, Safi};
-
-use super::{CapabilityCode, Emit};
+use crate::{Afi, CapabilityCode, Emit, Safi};
 
 #[bitfield(u16, debug = true)]
 #[derive(Serialize, Deserialize, PartialEq, NomBE)]
