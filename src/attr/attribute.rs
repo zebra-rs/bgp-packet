@@ -259,6 +259,30 @@ impl MpNlriReachAttr {
             };
             return Ok((input, mp_nlri));
         }
+        if header.afi == Afi::Ip && header.safi == Safi::Rtc {
+            println!("RTC");
+            // Nexthop can be IPv4 or IPv6 address.
+            if header.nhop_len != 4 && header.nhop_len != 16 {
+                return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+            }
+            let (input, nhop) = if header.nhop_len == 4 {
+                let (input, addr) = be_u32(input)?;
+                let nhop: IpAddr = IpAddr::V4(Ipv4Addr::from(addr));
+                (input, nhop)
+            } else {
+                let (input, addr) = be_u128(input)?;
+                let nhop: IpAddr = IpAddr::V6(Ipv6Addr::from(addr));
+                (input, nhop)
+            };
+            println!("NHOP: {}", nhop);
+            let (input, snpa) = be_u8(input)?;
+            println!("SNPA: {}", snpa);
+            let (input, plen) = be_u8(input)?;
+            println!("PLEN: {}", plen);
+            let (input, rd) = RouteDistinguisher::parse_be(input)?;
+            println!("RD: {}", rd);
+            return Ok((input, MpNlriReachAttr::default()));
+        }
         Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf)))
     }
 }
@@ -324,6 +348,9 @@ impl MpNlriUnreachAttr {
                 ..Default::default()
             };
             return Ok((input, mp_nlri));
+        }
+        if header.afi == Afi::Ip && header.safi == Safi::Rtc {
+            return Ok((input, MpNlriUnreachAttr::default()));
         }
         Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf)))
     }
