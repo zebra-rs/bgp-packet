@@ -179,14 +179,14 @@ impl From<UpdatePacket> for BytesMut {
         for attr in update.attrs.iter() {
             attr.emit(&mut buf);
         }
-        if update.vpnv4_update.len() > 0 {
+        if !update.vpnv4_update.is_empty() {
             let vpnv4 = Vpnv4Reach {
                 update: update.vpnv4_update,
                 nexthop: update.vpnv4_nexthop,
             };
             vpnv4.attr_emit(&mut buf);
         }
-        if update.vpnv4_withdraw.len() > 0 {
+        if !update.vpnv4_withdraw.is_empty() {
             let vpnv4 = Vpnv4Unreach {
                 withdraw: update.vpnv4_withdraw,
             };

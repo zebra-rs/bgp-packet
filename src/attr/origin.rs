@@ -9,17 +9,12 @@ use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe};
 
 /// BGP route origin types as defined in RFC 4271
 #[repr(u8)]
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Copy)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Copy, Default)]
 pub enum Origin {
-    Igp = 0,        // IGP (lowest preference)
+    #[default]
+    Igp = 0, // IGP (lowest preference)
     Egp = 1,        // EGP
     Incomplete = 2, // Incomplete (highest preference)
-}
-
-impl Default for Origin {
-    fn default() -> Self {
-        Origin::Igp
-    }
 }
 
 impl From<Origin> for u8 {

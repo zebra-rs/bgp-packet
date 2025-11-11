@@ -327,21 +327,22 @@ impl As4Path {
         }
 
         // Try to merge if both paths have a single AS_SEQ segment
-        if self.segs.len() == 1 && other.segs.len() == 1 {
-            if let (Some(self_seg), Some(other_seg)) = (self.segs.front(), other.segs.front()) {
-                if self_seg.typ == AS_SEQ && other_seg.typ == AS_SEQ {
-                    // Merge the two AS_SEQ segments
-                    let mut merged_asn = other_seg.asn.clone();
-                    merged_asn.extend(&self_seg.asn);
-                    self.segs.clear();
-                    self.segs.push_back(As4Segment {
-                        typ: AS_SEQ,
-                        asn: merged_asn,
-                    });
-                    self.update_length();
-                    return;
-                }
-            }
+        if self.segs.len() == 1
+            && other.segs.len() == 1
+            && let (Some(self_seg), Some(other_seg)) = (self.segs.front(), other.segs.front())
+            && self_seg.typ == AS_SEQ
+            && other_seg.typ == AS_SEQ
+        {
+            // Merge the two AS_SEQ segments
+            let mut merged_asn = other_seg.asn.clone();
+            merged_asn.extend(&self_seg.asn);
+            self.segs.clear();
+            self.segs.push_back(As4Segment {
+                typ: AS_SEQ,
+                asn: merged_asn,
+            });
+            self.update_length();
+            return;
         }
 
         // Default: concatenate segments

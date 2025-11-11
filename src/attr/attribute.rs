@@ -2,8 +2,8 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    Afi, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi, Vpnv4Nlri, get_parse_context,
-    many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
+    Afi, ExtCommunityValue, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi, Vpnv4Nlri,
+    get_parse_context, many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
     parse_bgp_nlri_vpnv4_prefix,
 };
 use ipnet::Ipv6Net;
@@ -28,6 +28,12 @@ pub struct MpNlriUnreachHeader {
     pub safi: Safi,
 }
 
+#[derive(Debug, Clone)]
+pub struct Rtcv4 {
+    pub asn: u32,
+    pub rt: ExtCommunityValue,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
@@ -36,6 +42,7 @@ pub struct MpNlriReachAttr {
     pub vpnv4_prefix: Vec<Vpnv4Nlri>,
     pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
     pub evpn_prefix: Vec<EvpnRoute>,
+    pub rtcv4_prefix: Vec<Rtcv4>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -46,6 +53,8 @@ pub struct MpNlriUnreachAttr {
     pub vpnv4_eor: bool,
     pub evpn_prefix: Vec<EvpnRoute>,
     pub evpn_eor: bool,
+    pub rtcv4_prefix: Vec<Rtcv4>,
+    pub rtcv4_eor: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -190,6 +199,18 @@ impl fmt::Display for Vpnv4Nexthop {
     }
 }
 
+pub fn parse_rtcv4_nlri(input: &[u8], _add_path: bool) -> IResult<&[u8], Rtcv4> {
+    // let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
+    let (input, plen) = be_u8(input)?;
+    if plen != 96 {
+        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+    }
+    let (input, asn) = be_u32(input)?;
+    let (input, rt) = ExtCommunityValue::parse_be(input)?;
+    let nlri = Rtcv4 { asn, rt };
+    Ok((input, nlri))
+}
+
 impl MpNlriReachAttr {
     pub fn parse_be_with_opt(input: &[u8], opt: Option<ParseOption>) -> nom::IResult<&[u8], Self> {
         if input.len() < size_of::<MpNlriReachHeader>() {
@@ -260,7 +281,6 @@ impl MpNlriReachAttr {
             return Ok((input, mp_nlri));
         }
         if header.afi == Afi::Ip && header.safi == Safi::Rtc {
-            println!("RTC");
             // Nexthop can be IPv4 or IPv6 address.
             if header.nhop_len != 4 && header.nhop_len != 16 {
                 return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
@@ -274,14 +294,15 @@ impl MpNlriReachAttr {
                 let nhop: IpAddr = IpAddr::V6(Ipv6Addr::from(addr));
                 (input, nhop)
             };
-            println!("NHOP: {}", nhop);
             let (input, snpa) = be_u8(input)?;
-            println!("SNPA: {}", snpa);
-            let (input, plen) = be_u8(input)?;
-            println!("PLEN: {}", plen);
-            let (input, rd) = RouteDistinguisher::parse_be(input)?;
-            println!("RD: {}", rd);
-            return Ok((input, MpNlriReachAttr::default()));
+            let (input, rtcv4) = many0(|i| parse_rtcv4_nlri(i, add_path)).parse(input)?;
+            let rtc_nlri = MpNlriReachAttr {
+                snpa,
+                nexthop: Some(nhop),
+                rtcv4_prefix: rtcv4,
+                ..Default::default()
+            };
+            return Ok((input, rtc_nlri));
         }
         Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf)))
     }
@@ -350,7 +371,19 @@ impl MpNlriUnreachAttr {
             return Ok((input, mp_nlri));
         }
         if header.afi == Afi::Ip && header.safi == Safi::Rtc {
-            return Ok((input, MpNlriUnreachAttr::default()));
+            if input.is_empty() {
+                let mp_nlri = MpNlriUnreachAttr {
+                    rtcv4_eor: true,
+                    ..Default::default()
+                };
+                return Ok((input, mp_nlri));
+            }
+            let (input, rtcv4) = many0(|i| parse_rtcv4_nlri(i, add_path)).parse(input)?;
+            let mp_nlri = MpNlriUnreachAttr {
+                rtcv4_prefix: rtcv4,
+                ..Default::default()
+            };
+            return Ok((input, mp_nlri));
         }
         Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf)))
     }
