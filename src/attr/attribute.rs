@@ -2,9 +2,8 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    Afi, ExtCommunityValue, Ipv6Nlri, ParseBe, ParseOption, RouteDistinguisher, Safi, Vpnv4Nlri,
-    get_parse_context, many0, nlri_psize, parse_bgp_evpn_prefix, parse_bgp_nlri_ipv6_prefix,
-    parse_bgp_nlri_vpnv4_prefix,
+    Afi, ExtCommunityValue, Ipv6Nlri, ParseBe, ParseNlri, ParseOption, RouteDistinguisher, Safi,
+    Vpnv4Nlri, get_parse_context, many0, nlri_psize, parse_bgp_evpn_prefix,
 };
 use ipnet::Ipv6Net;
 use nom::{
@@ -228,7 +227,7 @@ impl MpNlriReachAttr {
             let nhop: Ipv4Addr = Ipv4Addr::from(nhop);
             let nhop = Vpnv4Nexthop { rd, nhop };
             let (input, snpa) = be_u8(input)?;
-            let (_, updates) = many0(|i| parse_bgp_nlri_vpnv4_prefix(i, add_path)).parse(input)?;
+            let (_, updates) = many0(|i| Vpnv4Nlri::parse_nlri(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 snpa,
                 vpnv4_prefix: updates,
@@ -244,7 +243,7 @@ impl MpNlriReachAttr {
             let (input, nhop) = be_u128(input)?;
             let nhop = IpAddr::V6(Ipv6Addr::from(nhop));
             let (input, snpa) = be_u8(input)?;
-            let (_, updates) = many0(|i| parse_bgp_nlri_ipv6_prefix(i, add_path)).parse(input)?;
+            let (_, updates) = many0(|i| Ipv6Nlri::parse_nlri(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriReachAttr {
                 snpa,
                 nexthop: Some(nhop),
@@ -331,8 +330,7 @@ impl MpNlriUnreachAttr {
                 };
                 return Ok((input, mp_nlri));
             }
-            let (input, withdrawal) =
-                many0(|i| parse_bgp_nlri_vpnv4_prefix(i, add_path)).parse(input)?;
+            let (input, withdrawal) = many0(|i| Vpnv4Nlri::parse_nlri(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriUnreachAttr {
                 vpnv4_prefix: withdrawal,
                 ..Default::default()
@@ -347,8 +345,7 @@ impl MpNlriUnreachAttr {
                 };
                 return Ok((input, mp_nlri));
             }
-            let (input, withdrawal) =
-                many0(|i| parse_bgp_nlri_ipv6_prefix(i, add_path)).parse(input)?;
+            let (input, withdrawal) = many0(|i| Ipv6Nlri::parse_nlri(i, add_path)).parse(input)?;
             let mp_nlri = MpNlriUnreachAttr {
                 ipv6_prefix: withdrawal,
                 ..Default::default()
