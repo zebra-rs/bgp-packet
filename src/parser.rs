@@ -296,19 +296,36 @@ pub struct Ipv6Nlri {
     pub prefix: Ipv6Net,
 }
 
-pub fn parse_ipv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Ipv4Nlri> {
-    let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
-    let (input, plen) = be_u8(input)?;
-    let psize = nlri_psize(plen);
-    if input.len() < psize {
-        return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
+// pub fn parse_ipv4_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Ipv4Nlri> {
+//     let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
+//     let (input, plen) = be_u8(input)?;
+//     let psize = nlri_psize(plen);
+//     if input.len() < psize {
+//         return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
+//     }
+//     let mut paddr = [0u8; 4];
+//     paddr[..psize].copy_from_slice(&input[..psize]);
+//     let (input, _) = take(psize).parse(input)?;
+//     let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net crete error");
+//     let nlri = Ipv4Nlri { id, prefix };
+//     Ok((input, nlri))
+// }
+
+impl ParseNlri<Ipv4Nlri> for Ipv4Nlri {
+    fn parse_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], Ipv4Nlri> {
+        let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
+        let (input, plen) = be_u8(input)?;
+        let psize = nlri_psize(plen);
+        if input.len() < psize {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
+        }
+        let mut paddr = [0u8; 4];
+        paddr[..psize].copy_from_slice(&input[..psize]);
+        let (input, _) = take(psize).parse(input)?;
+        let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net crete error");
+        let nlri = Ipv4Nlri { id, prefix };
+        Ok((input, nlri))
     }
-    let mut paddr = [0u8; 4];
-    paddr[..psize].copy_from_slice(&input[..psize]);
-    let (input, _) = take(psize).parse(input)?;
-    let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net crete error");
-    let nlri = Ipv4Nlri { id, prefix };
-    Ok((input, nlri))
 }
 
 pub fn parse_bgp_nlri_ipv6_prefix(input: &[u8], add_path: bool) -> IResult<&[u8], Ipv6Nlri> {
@@ -342,7 +359,7 @@ pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
 
 fn parse_bgp_nlri_ipv4(input: &[u8], length: u16, add_path: bool) -> IResult<&[u8], Vec<Ipv4Nlri>> {
     let (nlri, input) = input.split_at(length as usize);
-    let (_, nlris) = many0(|i| parse_ipv4_prefix(i, add_path)).parse(nlri)?;
+    let (_, nlris) = many0(|i| Ipv4Nlri::parse_nlri(i, add_path)).parse(nlri)?;
     Ok((input, nlris))
 }
 
@@ -538,7 +555,7 @@ impl ParseBe<Ipv4Addr> for Ipv4Addr {
     }
 }
 
-pub fn u32_u8_3(value: u32) -> [u8; 3] {
+pub fn u32_u24(value: u32) -> [u8; 3] {
     // Extract the three least significant bytes as big-endian
     [
         (value >> 16) as u8, // Most significant byte of the remaining 3 bytes
