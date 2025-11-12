@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 use nom::number::complete::be_u24;
 use nom_derive::*;
 
-use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe, u32_u8_3};
+use crate::{AttrEmitter, AttrFlags, AttrType, ParseBe, u32_u24};
 
 #[derive(Clone, NomBE)]
 pub struct PmsiTunnel {
@@ -32,7 +32,7 @@ impl AttrEmitter for PmsiTunnel {
     fn emit(&self, buf: &mut BytesMut) {
         buf.put_u8(self.flags);
         buf.put_u8(self.tunnel_type);
-        buf.put(&u32_u8_3(self.vni)[..]);
+        buf.put(&u32_u24(self.vni)[..]);
         buf.put(&self.endpoint.octets()[..]);
     }
 }

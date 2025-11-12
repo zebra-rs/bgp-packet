@@ -1,22 +1,53 @@
 use std::fmt;
 
+use bitfield_struct::bitfield;
 use bytes::{BufMut, BytesMut};
-use nom::IResult;
-use nom::number::complete::{be_u16, be_u32};
 use nom_derive::*;
+use serde::{Deserialize, Serialize};
 
-use super::{CapabilityCode, Emit};
+use crate::{Afi, CapabilityCode, Emit, Safi};
 
-#[derive(Debug, PartialEq, NomBE, Clone)]
-pub struct CapabilityGracefulRestart {
-    #[nom(Parse = "parse_restart_time")]
-    pub restart_time: u32,
+#[bitfield(u16, debug = true)]
+#[derive(Serialize, Deserialize, PartialEq, NomBE)]
+pub struct RestartFlagTime {
+    #[bits(12)]
+    pub restart_time: u16,
+    #[bits(2)]
+    pub resvd: u8,
+    pub n_flag: bool,
+    pub r_flag: bool,
 }
 
-impl CapabilityGracefulRestart {
-    pub fn new(restart_time: u32) -> Self {
-        Self { restart_time }
+#[bitfield(u8, debug = true)]
+#[derive(Serialize, Deserialize, PartialEq, NomBE)]
+pub struct RestartFlags {
+    #[bits(7)]
+    pub resvd: u8,
+    pub p_flag: bool,
+}
+
+#[derive(Debug, PartialEq, Clone, NomBE)]
+pub struct GracefulRestartValue {
+    pub flag_time: RestartFlagTime,
+    pub afi: Afi,
+    pub safi: Safi,
+    pub flags: RestartFlags,
+}
+
+impl GracefulRestartValue {
+    pub fn new(restart_time: u16, afi: Afi, safi: Safi) -> Self {
+        Self {
+            flag_time: RestartFlagTime::new().with_restart_time(restart_time),
+            afi,
+            safi,
+            flags: RestartFlags::default(),
+        }
     }
+}
+
+#[derive(Debug, Default, PartialEq, NomBE, Clone)]
+pub struct CapabilityGracefulRestart {
+    pub values: Vec<GracefulRestartValue>,
 }
 
 impl Emit for CapabilityGracefulRestart {
@@ -25,30 +56,37 @@ impl Emit for CapabilityGracefulRestart {
     }
 
     fn len(&self) -> u8 {
-        4
+        (self.values.len() * 6) as u8
     }
 
     fn emit_value(&self, buf: &mut BytesMut) {
-        buf.put_u32(self.restart_time);
-    }
-}
-
-pub fn parse_restart_time(input: &[u8]) -> IResult<&[u8], u32> {
-    if input.len() == 2 {
-        let (input, val) = be_u16(input)?;
-        Ok((input, val as u32))
-    } else if input.len() == 4 {
-        let (input, val) = be_u32(input)?;
-        Ok((input, val))
-    } else {
-        let (input, val) = be_u16(input)?;
-        let (input, _) = be_u32(input)?;
-        Ok((input, val.into()))
+        for val in self.values.iter() {
+            buf.put_u16(val.flag_time.into());
+            buf.put_u16(val.afi.into());
+            buf.put_u8(val.safi.into());
+            buf.put_u8(val.flags.into());
+        }
     }
 }
 
 impl fmt::Display for CapabilityGracefulRestart {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Graceful Restart: restart time {}", self.restart_time)
+        let _ = write!(f, "GracefulRestart: ");
+        for (i, value) in self.values.iter().enumerate() {
+            if i > 0 {
+                let _ = write!(f, ", ");
+            }
+            let _ = write!(
+                f,
+                "{}/{} restart time:{} R:{} N:{} P:{}",
+                value.afi,
+                value.safi,
+                value.flag_time.restart_time(),
+                value.flag_time.r_flag(),
+                value.flag_time.n_flag(),
+                value.flags.p_flag(),
+            );
+        }
+        Ok(())
     }
 }
