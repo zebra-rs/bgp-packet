@@ -61,7 +61,7 @@ impl LLGRValue {
 
 impl Emit for CapabilityLlgr {
     fn code(&self) -> CapabilityCode {
-        CapabilityCode::Llgr
+        CapabilityCode::LlgrOld
     }
 
     fn len(&self) -> u8 {
