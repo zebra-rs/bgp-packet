@@ -3,7 +3,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use crate::{
     Afi, ExtCommunityValue, Ipv6Nlri, ParseBe, ParseNlri, ParseOption, RouteDistinguisher, Safi,
-    Vpnv4Nlri, get_parse_context, many0, nlri_psize, parse_bgp_evpn_prefix,
+    Vpnv4Nlri, get_parse_context, many0, nlri_psize,
 };
 use ipnet::Ipv6Net;
 use nom::{
@@ -173,7 +173,7 @@ pub fn parse_evpn_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], EvpnRoute
             let (input, rd) = RouteDistinguisher::parse_be(input)?;
             let (input, ether_tag) = be_u32(input)?;
 
-            let (input, updates) = many0(parse_bgp_evpn_prefix).parse(input)?;
+            let (input, updates) = many0(Ipv6Net::parse_be).parse(input)?;
             let evpn = EvpnMulticast {
                 rd,
                 ether_tag,

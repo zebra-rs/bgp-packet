@@ -336,18 +336,20 @@ impl ParseNlri<Ipv6Nlri> for Ipv6Nlri {
     }
 }
 
-pub fn parse_bgp_evpn_prefix(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
-    let (input, plen) = be_u8(input)?;
-    let psize = nlri_psize(plen);
-    if input.len() < psize {
-        return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
-    }
-    let mut paddr = [0u8; 16];
-    paddr[..psize].copy_from_slice(&input[..psize]);
-    let (input, _) = take(psize).parse(input)?;
-    let prefix = Ipv6Net::new(Ipv6Addr::from(paddr), plen).expect("Ipv6Net create error");
+impl ParseBe<Ipv6Net> for Ipv6Net {
+    fn parse_be(input: &[u8]) -> IResult<&[u8], Ipv6Net> {
+        let (input, plen) = be_u8(input)?;
+        let psize = nlri_psize(plen);
+        if input.len() < psize {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
+        }
+        let mut paddr = [0u8; 16];
+        paddr[..psize].copy_from_slice(&input[..psize]);
+        let (input, _) = take(psize).parse(input)?;
+        let prefix = Ipv6Net::new(Ipv6Addr::from(paddr), plen).expect("Ipv6Net create error");
 
-    Ok((input, prefix))
+        Ok((input, prefix))
+    }
 }
 
 #[derive(Debug, Clone)]
