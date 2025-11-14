@@ -50,6 +50,10 @@ fn sub_type_str(sub_type: u8) -> &'static str {
 
 use ExtCommunityType::*;
 
+enum TunnelType {
+    VXLAN = 8,
+}
+
 impl fmt::Display for ExtCommunityValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.high_type == TransTwoOctetAS as u8 {
