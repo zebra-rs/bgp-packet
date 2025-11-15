@@ -94,7 +94,7 @@ pub enum MpNlriReachAttr {
 #[derive(Clone)]
 pub enum MpNlriUnreachAttr {
     // Ipv4Nlri(Vec<>),
-    // Ipv4Eor,
+    Ipv4Eor,
     Ipv6Nlri(Vec<Ipv6Nlri>),
     Ipv6Eor,
     Vpnv4(Vec<Vpnv4Nlri>),
@@ -483,6 +483,9 @@ impl fmt::Display for MpNlriUnreachAttr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use MpNlriUnreachAttr::*;
         match self {
+            Ipv4Eor => {
+                write!(f, "EoR: {}/{}", Afi::Ip, Safi::Unicast)
+            }
             Ipv6Nlri(ipv6_nlris) => {
                 for ipv6 in ipv6_nlris.iter() {
                     writeln!(f, "{}:{}", ipv6.id, ipv6.prefix)?;
@@ -490,7 +493,7 @@ impl fmt::Display for MpNlriUnreachAttr {
                 Ok(())
             }
             Ipv6Eor => {
-                write!(f, "EoR: {}/{}", Afi::Ip, Safi::Unicast)
+                write!(f, "EoR: {}/{}", Afi::Ip6, Safi::Unicast)
             }
             Vpnv4(vpnv4_nlris) => {
                 for vpnv4 in vpnv4_nlris.iter() {
