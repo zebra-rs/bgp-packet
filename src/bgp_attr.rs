@@ -146,9 +146,17 @@ impl BgpAttr {
                 }
                 Attr::MpReachNlri(v) => {
                     // Handle nexthop.
-                    if let Some(ref nexthop) = v.vpnv4_nexthop {
-                        bgp_attr.nexthop = Some(BgpNexthop::Vpnv4(nexthop.clone()));
+                    if let MpNlriReachAttr::Vpnv4 {
+                        snpa: _,
+                        nhop,
+                        updates: _,
+                    } = v
+                    {
+                        bgp_attr.nexthop = Some(BgpNexthop::Vpnv4(nhop.clone()));
                     }
+                    // if let Some(ref nexthop) = v.vpnv4_nexthop {
+                    //     bgp_attr.nexthop = Some(BgpNexthop::Vpnv4(nexthop.clone()));
+                    // }
                 }
                 Attr::MpUnreachNlri(_v) => {
                     // Ignore in attribute conversion.
