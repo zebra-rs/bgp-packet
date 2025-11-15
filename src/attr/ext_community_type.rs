@@ -1,3 +1,7 @@
+use std::fmt;
+
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 #[repr(u8)]
 pub enum ExtCommunityType {
     TransTwoOctetAS = 0x00,
@@ -6,9 +10,52 @@ pub enum ExtCommunityType {
     TransOpaque = 0x03,
 }
 
+#[derive(TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum ExtCommunitySubType {
     RouteTarget = 0x02,
     RouteOrigin = 0x03,
     Opaque = 0x0c,
+}
+
+impl fmt::Display for ExtCommunitySubType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::RouteTarget => write!(f, "rt"),
+            Self::RouteOrigin => write!(f, "soo"),
+            Self::Opaque => write!(f, "opaque"),
+        }
+    }
+}
+
+impl ExtCommunitySubType {
+    pub fn display(val: u8) -> String {
+        if let Ok(sub_type) = Self::try_from(val) {
+            format!("{sub_type}")
+        } else {
+            "unknown".to_string()
+        }
+    }
+}
+
+#[derive(TryFromPrimitive, IntoPrimitive)]
+#[repr(u16)]
+pub enum TunnelType {
+    L2tpv3 = 1,
+    Gre = 2,
+    Vxlan = 8,
+    Nvgre = 9,
+    MplsGre = 11,
+}
+
+impl fmt::Display for TunnelType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::L2tpv3 => write!(f, "L2TPv3"),
+            Self::Gre => write!(f, "GRE"),
+            Self::Vxlan => write!(f, "VXLAN"),
+            Self::Nvgre => write!(f, "NVGRE"),
+            Self::MplsGre => write!(f, "MPLS-in-GRE"),
+        }
+    }
 }

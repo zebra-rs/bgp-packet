@@ -9,8 +9,8 @@ fn test1(buf: &[u8]) {
     let (_, packet) = packet.unwrap();
     if let BgpPacket::Update(update) = packet {
         for attr in update.attrs.iter() {
-            if let Attr::MpUnreachNlri(unreach) = attr {
-                assert!(unreach.evpn_prefix.len() == 1);
+            if let Attr::MpUnreachNlri(MpNlriUnreachAttr::Evpn(evpn_routes)) = attr {
+                assert!(evpn_routes.len() == 1);
             }
         }
     } else {
@@ -27,8 +27,8 @@ fn test2(buf: &[u8]) {
     if let BgpPacket::Update(update) = packet {
         println!("{:?}", update);
         for attr in update.attrs.iter() {
-            if let Attr::MpUnreachNlri(unreach) = attr {
-                assert!(unreach.evpn_prefix.len() == 2);
+            if let Attr::MpUnreachNlri(MpNlriUnreachAttr::Evpn(evpn_routes)) = attr {
+                assert!(evpn_routes.len() == 2);
             }
         }
     } else {

@@ -6,17 +6,7 @@ use nom::IResult;
 use nom::number::complete::{be_u8, be_u24};
 use nom_derive::*;
 
-use super::{CapabilityCode, Emit};
-use crate::{Afi, ParseBe, Safi};
-
-pub fn u32_u8_3(value: u32) -> [u8; 3] {
-    // Extract the three least significant bytes as big-endian
-    [
-        (value >> 16) as u8, // Most significant byte of the remaining 3 bytes
-        (value >> 8) as u8,  // Middle byte
-        value as u8,         // Least significant byte
-    ]
-}
+use crate::{Afi, CapabilityCode, Emit, ParseBe, Safi, u32_u24};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapabilityLlgr {
@@ -73,7 +63,7 @@ impl Emit for CapabilityLlgr {
             buf.put_u16(val.afi.into());
             buf.put_u8(val.safi.into());
             buf.put_u8(val.flags.into());
-            buf.put(&u32_u8_3(val.stale_time)[..]);
+            buf.put(&u32_u24(val.stale_time)[..]);
         }
     }
 }

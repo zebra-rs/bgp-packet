@@ -2,8 +2,8 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use crate::{
-    Afi, ExtCommunityValue, Ipv6Nlri, ParseBe, ParseNlri, ParseOption, RouteDistinguisher, Safi,
-    Vpnv4Nlri, get_parse_context, many0, nlri_psize,
+    Afi, ExtCommunityValue, Ipv4Nlri, Ipv6Nlri, ParseBe, ParseNlri, ParseOption,
+    RouteDistinguisher, Safi, Vpnv4Nlri, get_parse_context, many0, nlri_psize,
 };
 use ipnet::Ipv6Net;
 use nom::{
@@ -29,31 +29,82 @@ pub struct MpNlriUnreachHeader {
 
 #[derive(Debug, Clone)]
 pub struct Rtcv4 {
+    pub id: u32,
     pub asn: u32,
     pub rt: ExtCommunityValue,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct MpNlriReachAttr {
-    pub snpa: u8,
-    pub nexthop: Option<IpAddr>,
-    pub ipv6_prefix: Vec<Ipv6Nlri>,
-    pub vpnv4_prefix: Vec<Vpnv4Nlri>,
-    pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
-    pub evpn_prefix: Vec<EvpnRoute>,
-    pub rtcv4_prefix: Vec<Rtcv4>,
+impl ParseNlri<Rtcv4> for Rtcv4 {
+    fn parse_nlri(input: &[u8], addpath: bool) -> IResult<&[u8], Rtcv4> {
+        let (input, id) = if addpath { be_u32(input)? } else { (input, 0) };
+        let (input, plen) = be_u8(input)?;
+        if plen != 96 {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+        }
+        let (input, asn) = be_u32(input)?;
+        let (input, rt) = ExtCommunityValue::parse_be(input)?;
+        let nlri = Rtcv4 { id, asn, rt };
+        Ok((input, nlri))
+    }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct MpNlriUnreachAttr {
-    pub ipv6_prefix: Vec<Ipv6Nlri>,
-    pub ipv6_eor: bool,
-    pub vpnv4_prefix: Vec<Vpnv4Nlri>,
-    pub vpnv4_eor: bool,
-    pub evpn_prefix: Vec<EvpnRoute>,
-    pub evpn_eor: bool,
-    pub rtcv4_prefix: Vec<Rtcv4>,
-    pub rtcv4_eor: bool,
+// #[derive(Clone, Default)]
+// pub struct MpNlriReachAttr {
+//     pub snpa: u8,
+//     pub nexthop: Option<IpAddr>,
+//     pub ipv6_prefix: Vec<Ipv6Nlri>,
+//     pub vpnv4_prefix: Vec<Vpnv4Nlri>,
+//     pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
+//     pub evpn_prefix: Vec<EvpnRoute>,
+//     pub rtcv4_prefix: Vec<Rtcv4>,
+// }
+
+#[derive(Clone)]
+pub enum MpNlriReachAttr {
+    Ipv4 {
+        snpa: u8,
+        nhop: IpAddr,
+        updates: Vec<Ipv4Nlri>,
+    },
+    Ipv6 {
+        snpa: u8,
+        nhop: IpAddr,
+        updates: Vec<Ipv6Nlri>,
+    },
+    Vpnv4 {
+        snpa: u8,
+        nhop: Vpnv4Nexthop,
+        updates: Vec<Vpnv4Nlri>,
+    },
+    // Vpnv6 {
+    //     //
+    // },
+    Evpn {
+        snpa: u8,
+        nhop: IpAddr,
+        updates: Vec<EvpnRoute>,
+    },
+    Rtcv4 {
+        snpa: u8,
+        nhop: IpAddr,
+        updates: Vec<Rtcv4>,
+    },
+}
+
+#[derive(Clone)]
+pub enum MpNlriUnreachAttr {
+    // Ipv4Nlri(Vec<>),
+    Ipv4Eor,
+    Ipv6Nlri(Vec<Ipv6Nlri>),
+    Ipv6Eor,
+    Vpnv4(Vec<Vpnv4Nlri>),
+    Vpnv4Eor,
+    // Vpnv6,
+    // Vpnv6Eor,
+    Evpn(Vec<EvpnRoute>),
+    EvpnEor,
+    Rtcv4(Vec<Rtcv4>),
+    Rtcv4Eor,
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +155,67 @@ pub enum EvpnRoute {
     Multicast(EvpnMulticast),
 }
 
+impl ParseNlri<EvpnRoute> for EvpnRoute {
+    fn parse_nlri(input: &[u8], addpath: bool) -> IResult<&[u8], EvpnRoute> {
+        let (input, id) = if addpath { be_u32(input)? } else { (input, 0) };
+        let (input, typ) = be_u8(input)?;
+        let route_type: EvpnRouteType = typ.into();
+        let (input, _length) = be_u8(input)?;
+
+        use EvpnRouteType::*;
+        match route_type {
+            MacIpAdvRoute => {
+                let (input, rd) = RouteDistinguisher::parse_be(input)?;
+
+                let (input, esi_type) = be_u8(input)?;
+                let (input, _esi) = take(9usize).parse(input)?;
+                let (input, ether_tag) = be_u32(input)?;
+
+                let (input, mac_len) = be_u8(input)?;
+                let mac_size = nlri_psize(mac_len);
+                if mac_size != 6 {
+                    return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+                }
+                let (input, mac) = take(6usize).parse(input)?;
+                let (input, ip_len) = be_u8(input)?;
+                let ip_size = nlri_psize(ip_len);
+                let (input, _) = if ip_size != 0 {
+                    take(ip_size).parse(input)?
+                } else {
+                    (input, &[] as &[u8])
+                };
+                let (input, vni) = be_u24(input)?;
+
+                let mut evpn = EvpnMac {
+                    id,
+                    rd,
+                    esi_type,
+                    ether_tag,
+                    mac: [0u8; 6],
+                    vni,
+                };
+                evpn.mac.copy_from_slice(mac);
+
+                Ok((input, EvpnRoute::Mac(evpn)))
+            }
+            IncMulticast => {
+                let (input, rd) = RouteDistinguisher::parse_be(input)?;
+                let (input, ether_tag) = be_u32(input)?;
+
+                let (input, updates) = many0(Ipv6Net::parse_be).parse(input)?;
+                let evpn = EvpnMulticast {
+                    rd,
+                    ether_tag,
+                    updates,
+                };
+
+                Ok((input, EvpnRoute::Multicast(evpn)))
+            }
+            _ => Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf))),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct EvpnMac {
     pub id: u32,
@@ -127,65 +239,6 @@ impl Evpn {
     }
 }
 
-pub fn parse_evpn_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], EvpnRoute> {
-    let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
-    let (input, typ) = be_u8(input)?;
-    let route_type: EvpnRouteType = typ.into();
-    let (input, _length) = be_u8(input)?;
-
-    use EvpnRouteType::*;
-    match route_type {
-        MacIpAdvRoute => {
-            let (input, rd) = RouteDistinguisher::parse_be(input)?;
-
-            let (input, esi_type) = be_u8(input)?;
-            let (input, _esi) = take(9usize).parse(input)?;
-            let (input, ether_tag) = be_u32(input)?;
-
-            let (input, mac_len) = be_u8(input)?;
-            let mac_size = nlri_psize(mac_len);
-            if mac_size != 6 {
-                return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
-            }
-            let (input, mac) = take(6usize).parse(input)?;
-            let (input, ip_len) = be_u8(input)?;
-            let ip_size = nlri_psize(ip_len);
-            let (input, _) = if ip_size != 0 {
-                take(ip_size).parse(input)?
-            } else {
-                (input, &[] as &[u8])
-            };
-            let (input, vni) = be_u24(input)?;
-
-            let mut evpn = EvpnMac {
-                id,
-                rd,
-                esi_type,
-                ether_tag,
-                mac: [0u8; 6],
-                vni,
-            };
-            evpn.mac.copy_from_slice(mac);
-
-            Ok((input, EvpnRoute::Mac(evpn)))
-        }
-        IncMulticast => {
-            let (input, rd) = RouteDistinguisher::parse_be(input)?;
-            let (input, ether_tag) = be_u32(input)?;
-
-            let (input, updates) = many0(Ipv6Net::parse_be).parse(input)?;
-            let evpn = EvpnMulticast {
-                rd,
-                ether_tag,
-                updates,
-            };
-
-            Ok((input, EvpnRoute::Multicast(evpn)))
-        }
-        _ => Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf))),
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Vpnv4Nexthop {
     pub rd: RouteDistinguisher,
@@ -198,20 +251,8 @@ impl fmt::Display for Vpnv4Nexthop {
     }
 }
 
-pub fn parse_rtcv4_nlri(input: &[u8], _add_path: bool) -> IResult<&[u8], Rtcv4> {
-    // let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
-    let (input, plen) = be_u8(input)?;
-    if plen != 96 {
-        return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
-    }
-    let (input, asn) = be_u32(input)?;
-    let (input, rt) = ExtCommunityValue::parse_be(input)?;
-    let nlri = Rtcv4 { asn, rt };
-    Ok((input, nlri))
-}
-
 impl MpNlriReachAttr {
-    pub fn parse_be_with_opt(input: &[u8], opt: Option<ParseOption>) -> nom::IResult<&[u8], Self> {
+    pub fn parse_nlri_opt(input: &[u8], opt: Option<ParseOption>) -> nom::IResult<&[u8], Self> {
         if input.len() < size_of::<MpNlriReachHeader>() {
             return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
         }
@@ -228,11 +269,10 @@ impl MpNlriReachAttr {
             let nhop = Vpnv4Nexthop { rd, nhop };
             let (input, snpa) = be_u8(input)?;
             let (_, updates) = many0(|i| Vpnv4Nlri::parse_nlri(i, add_path)).parse(input)?;
-            let mp_nlri = MpNlriReachAttr {
+            let mp_nlri = MpNlriReachAttr::Vpnv4 {
                 snpa,
-                vpnv4_prefix: updates,
-                vpnv4_nexthop: Some(nhop),
-                ..Default::default()
+                nhop,
+                updates,
             };
             return Ok((input, mp_nlri));
         }
@@ -244,11 +284,10 @@ impl MpNlriReachAttr {
             let nhop = IpAddr::V6(Ipv6Addr::from(nhop));
             let (input, snpa) = be_u8(input)?;
             let (_, updates) = many0(|i| Ipv6Nlri::parse_nlri(i, add_path)).parse(input)?;
-            let mp_nlri = MpNlriReachAttr {
+            let mp_nlri = MpNlriReachAttr::Ipv6 {
                 snpa,
-                nexthop: Some(nhop),
-                ipv6_prefix: updates,
-                ..Default::default()
+                nhop,
+                updates,
             };
             return Ok((input, mp_nlri));
         }
@@ -269,13 +308,12 @@ impl MpNlriReachAttr {
             let (input, snpa) = be_u8(input)?;
 
             // EVPN
-            let (input, evpns) = many0(|i| parse_evpn_nlri(i, add_path)).parse(input)?;
+            let (input, updates) = many0(|i| EvpnRoute::parse_nlri(i, add_path)).parse(input)?;
 
-            let mp_nlri = MpNlriReachAttr {
+            let mp_nlri = MpNlriReachAttr::Evpn {
                 snpa,
-                nexthop: Some(nhop),
-                evpn_prefix: evpns,
-                ..Default::default()
+                nhop,
+                updates,
             };
             return Ok((input, mp_nlri));
         }
@@ -294,12 +332,11 @@ impl MpNlriReachAttr {
                 (input, nhop)
             };
             let (input, snpa) = be_u8(input)?;
-            let (input, rtcv4) = many0(|i| parse_rtcv4_nlri(i, add_path)).parse(input)?;
-            let rtc_nlri = MpNlriReachAttr {
+            let (input, updates) = many0(|i| Rtcv4::parse_nlri(i, add_path)).parse(input)?;
+            let rtc_nlri = MpNlriReachAttr::Rtcv4 {
                 snpa,
-                nexthop: Some(nhop),
-                rtcv4_prefix: rtcv4,
-                ..Default::default()
+                nhop,
+                updates,
             };
             return Ok((input, rtc_nlri));
         }
@@ -308,7 +345,7 @@ impl MpNlriReachAttr {
 }
 
 impl MpNlriUnreachAttr {
-    pub fn parse_be_with_opt(input: &[u8], opt: Option<ParseOption>) -> nom::IResult<&[u8], Self> {
+    pub fn parse_nlri_opt(input: &[u8], opt: Option<ParseOption>) -> nom::IResult<&[u8], Self> {
         // AFI + SAFI = 3.
         if input.len() < 3 {
             return Err(nom::Err::Error(nom::error::Error::new(
@@ -324,62 +361,38 @@ impl MpNlriUnreachAttr {
         };
         if header.afi == Afi::Ip && header.safi == Safi::MplsVpn {
             if input.is_empty() {
-                let mp_nlri = MpNlriUnreachAttr {
-                    vpnv4_eor: true,
-                    ..Default::default()
-                };
+                let mp_nlri = MpNlriUnreachAttr::Vpnv4Eor;
                 return Ok((input, mp_nlri));
             }
             let (input, withdrawal) = many0(|i| Vpnv4Nlri::parse_nlri(i, add_path)).parse(input)?;
-            let mp_nlri = MpNlriUnreachAttr {
-                vpnv4_prefix: withdrawal,
-                ..Default::default()
-            };
+            let mp_nlri = MpNlriUnreachAttr::Vpnv4(withdrawal);
             return Ok((input, mp_nlri));
         }
         if header.afi == Afi::Ip6 && header.safi == Safi::Unicast {
             if input.is_empty() {
-                let mp_nlri = MpNlriUnreachAttr {
-                    ipv6_eor: true,
-                    ..Default::default()
-                };
+                let mp_nlri = MpNlriUnreachAttr::Ipv6Eor;
                 return Ok((input, mp_nlri));
             }
             let (input, withdrawal) = many0(|i| Ipv6Nlri::parse_nlri(i, add_path)).parse(input)?;
-            let mp_nlri = MpNlriUnreachAttr {
-                ipv6_prefix: withdrawal,
-                ..Default::default()
-            };
+            let mp_nlri = MpNlriUnreachAttr::Ipv6Nlri(withdrawal);
             return Ok((input, mp_nlri));
         }
         if header.afi == Afi::L2vpn && header.safi == Safi::Evpn {
             if input.is_empty() {
-                let mp_nlri = MpNlriUnreachAttr {
-                    evpn_eor: true,
-                    ..Default::default()
-                };
+                let mp_nlri = MpNlriUnreachAttr::EvpnEor;
                 return Ok((input, mp_nlri));
             }
-            let (input, evpns) = many0(|i| parse_evpn_nlri(i, add_path)).parse(input)?;
-            let mp_nlri = MpNlriUnreachAttr {
-                evpn_prefix: evpns,
-                ..Default::default()
-            };
+            let (input, evpns) = many0(|i| EvpnRoute::parse_nlri(i, add_path)).parse(input)?;
+            let mp_nlri = MpNlriUnreachAttr::Evpn(evpns);
             return Ok((input, mp_nlri));
         }
         if header.afi == Afi::Ip && header.safi == Safi::Rtc {
             if input.is_empty() {
-                let mp_nlri = MpNlriUnreachAttr {
-                    rtcv4_eor: true,
-                    ..Default::default()
-                };
+                let mp_nlri = MpNlriUnreachAttr::Rtcv4Eor;
                 return Ok((input, mp_nlri));
             }
-            let (input, rtcv4) = many0(|i| parse_rtcv4_nlri(i, add_path)).parse(input)?;
-            let mp_nlri = MpNlriUnreachAttr {
-                rtcv4_prefix: rtcv4,
-                ..Default::default()
-            };
+            let (input, rtcv4) = many0(|i| Rtcv4::parse_nlri(i, add_path)).parse(input)?;
+            let mp_nlri = MpNlriUnreachAttr::Rtcv4(rtcv4);
             return Ok((input, mp_nlri));
         }
         Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf)))
@@ -390,42 +403,76 @@ impl MpNlriUnreachAttr {
 impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
         let opt = get_parse_context();
-        Self::parse_be_with_opt(input, opt)
+        Self::parse_nlri_opt(input, opt)
     }
 }
 
 impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
         let opt = get_parse_context();
-        Self::parse_be_with_opt(input, opt)
+        Self::parse_nlri_opt(input, opt)
     }
 }
 
 impl fmt::Display for MpNlriReachAttr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !self.vpnv4_prefix.is_empty() {
-            for vpn in self.vpnv4_prefix.iter() {
-                write!(f, "{}", vpn)?;
+        use MpNlriReachAttr::*;
+        match self {
+            Ipv6 {
+                snpa: _,
+                nhop,
+                updates,
+            } => {
+                for update in updates.iter() {
+                    writeln!(f, "{}:{} => {}", update.id, update.prefix, nhop)?;
+                }
             }
-            if let Some(nhop) = &self.vpnv4_nexthop {
-                write!(f, " Nexthop: {}", nhop)?;
-            }
-        }
-        for evpn in self.evpn_prefix.iter() {
-            match evpn {
-                EvpnRoute::Mac(v) => {
-                    write!(
+            Vpnv4 {
+                snpa: _,
+                nhop,
+                updates,
+            } => {
+                for update in updates.iter() {
+                    writeln!(
                         f,
-                        "RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
-                        v.rd, v.vni, v.mac[0], v.mac[1], v.mac[2], v.mac[3], v.mac[4], v.mac[5],
+                        "{}:{}:{} => {}",
+                        update.nlri.id, update.rd, update.nlri.prefix, nhop
                     )?;
                 }
-                EvpnRoute::Multicast(v) => {
-                    write!(f, "RD: {}", v.rd)?;
-                    for update in v.updates.iter() {
-                        write!(f, " {}", update)?;
+            }
+            Evpn {
+                snpa: _,
+                nhop,
+                updates,
+            } => {
+                for update in updates.iter() {
+                    match update {
+                        EvpnRoute::Mac(v) => {
+                            write!(
+                                f,
+                                "RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x} => {}",
+                                v.rd,
+                                v.vni,
+                                v.mac[0],
+                                v.mac[1],
+                                v.mac[2],
+                                v.mac[3],
+                                v.mac[4],
+                                v.mac[5],
+                                nhop,
+                            )?;
+                        }
+                        EvpnRoute::Multicast(v) => {
+                            write!(f, "RD: {}", v.rd)?;
+                            for update in v.updates.iter() {
+                                write!(f, " {} => {}", update, nhop)?;
+                            }
+                        }
                     }
                 }
+            }
+            _ => {
+                //
             }
         }
         Ok(())
@@ -434,32 +481,80 @@ impl fmt::Display for MpNlriReachAttr {
 
 impl fmt::Display for MpNlriUnreachAttr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.vpnv4_eor {
-            write!(f, "EoR: AFI:IP, SAFI:MPLS_VPN")?;
-        }
-        if self.ipv6_eor {
-            write!(f, "EoR: AFI:IP6, SAFI:UNICAST")?;
-        }
-        if self.evpn_eor {
-            write!(f, "EoR: AFI:L2VPN, SAFI:EVPN")?;
-        }
-        for evpn in self.evpn_prefix.iter() {
-            match evpn {
-                EvpnRoute::Mac(v) => {
-                    write!(
-                        f,
-                        "RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
-                        v.rd, v.vni, v.mac[0], v.mac[1], v.mac[2], v.mac[3], v.mac[4], v.mac[5],
-                    )?;
+        use MpNlriUnreachAttr::*;
+        match self {
+            Ipv4Eor => {
+                write!(f, "EoR: {}/{}", Afi::Ip, Safi::Unicast)
+            }
+            Ipv6Nlri(ipv6_nlris) => {
+                for ipv6 in ipv6_nlris.iter() {
+                    writeln!(f, "{}:{}", ipv6.id, ipv6.prefix)?;
                 }
-                EvpnRoute::Multicast(v) => {
-                    write!(f, "RD: {}", v.rd)?;
-                    for update in v.updates.iter() {
-                        write!(f, " {}", update)?;
+                Ok(())
+            }
+            Ipv6Eor => {
+                write!(f, "EoR: {}/{}", Afi::Ip6, Safi::Unicast)
+            }
+            Vpnv4(vpnv4_nlris) => {
+                for vpnv4 in vpnv4_nlris.iter() {
+                    writeln!(f, "{}:{}:{}", vpnv4.nlri.id, vpnv4.rd, vpnv4.nlri.prefix)?;
+                }
+                Ok(())
+            }
+            Vpnv4Eor => {
+                write!(f, "EoR: {}/{}", Afi::Ip, Safi::MplsVpn)
+            }
+            Evpn(evpn_routes) => {
+                for evpn in evpn_routes.iter() {
+                    match evpn {
+                        EvpnRoute::Mac(v) => {
+                            write!(
+                                f,
+                                "RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
+                                v.rd,
+                                v.vni,
+                                v.mac[0],
+                                v.mac[1],
+                                v.mac[2],
+                                v.mac[3],
+                                v.mac[4],
+                                v.mac[5],
+                            )?;
+                        }
+                        EvpnRoute::Multicast(v) => {
+                            write!(f, "RD: {}", v.rd)?;
+                            for update in v.updates.iter() {
+                                write!(f, " {}", update)?;
+                            }
+                        }
                     }
                 }
+                Ok(())
+            }
+            EvpnEor => {
+                write!(f, "EoR: {}/{}", Afi::L2vpn, Safi::Evpn)
+            }
+            Rtcv4(rtcv4s) => {
+                for rtcv4 in rtcv4s {
+                    write!(f, "ASN:{} {}", rtcv4.asn, rtcv4.rt)?;
+                }
+                Ok(())
+            }
+            Rtcv4Eor => {
+                write!(f, "EoR: {}/{}", Afi::Ip, Safi::Rtc)
             }
         }
-        Ok(())
+    }
+}
+
+impl fmt::Debug for MpNlriReachAttr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl fmt::Debug for MpNlriUnreachAttr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
     }
 }
