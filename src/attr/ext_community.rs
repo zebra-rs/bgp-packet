@@ -4,11 +4,10 @@ use std::str::FromStr;
 
 use bytes::{BufMut, BytesMut};
 use nom_derive::NomBE;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     AttrEmitter, AttrFlags, AttrType, ExtCommunitySubType, ExtCommunityType, RouteDistinguisher,
-    RouteDistinguisherType,
+    RouteDistinguisherType, TunnelType,
 };
 
 use super::ext_community_token::{Token, tokenizer};
@@ -38,57 +37,42 @@ impl ExtCommunityValue {
     }
 }
 
-#[derive(TryFromPrimitive, IntoPrimitive)]
-#[repr(u16)]
-enum TunnelType {
-    L2tpv3 = 1,
-    Gre = 2,
-    Vxlan = 8,
-    Nvgre = 9,
-    MplsGre = 11,
-}
-
-impl fmt::Display for TunnelType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TunnelType::L2tpv3 => write!(f, "L2TPv3"),
-            TunnelType::Gre => write!(f, "GRE"),
-            TunnelType::Vxlan => write!(f, "VXLAN"),
-            TunnelType::Nvgre => write!(f, "NVGRE"),
-            TunnelType::MplsGre => write!(f, "MPLS-in-GRE"),
-        }
-    }
-}
-
-fn sub_type_str(sub_type: u8) -> &'static str {
-    use ExtCommunitySubType::*;
-    match sub_type {
-        x if x == RouteTarget as u8 => "rt",
-        x if x == RouteOrigin as u8 => "soo",
-        x if x == Opaque as u8 => "opaque",
-        _ => "unknown",
-    }
-}
-
 impl fmt::Display for ExtCommunityValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ExtCommunityType::*;
         if self.high_type == TransTwoOctetAS as u8 {
             let asn = u16::from_be_bytes([self.val[0], self.val[1]]);
             let val = u32::from_be_bytes([self.val[2], self.val[3], self.val[4], self.val[5]]);
-            write!(f, "{} {asn}:{val}", sub_type_str(self.low_type))
+            write!(
+                f,
+                "{} {asn}:{val}",
+                ExtCommunitySubType::display(self.low_type)
+            )
         } else if self.high_type == TransOpaque as u8 {
             let ip = Ipv4Addr::new(self.val[0], self.val[1], self.val[2], self.val[3]);
             let val = u16::from_be_bytes([self.val[4], self.val[5]]);
             if let Ok(tunnel_type) = TunnelType::try_from(val) {
-                write!(f, "{} {}", sub_type_str(self.low_type), tunnel_type)
+                write!(
+                    f,
+                    "{} {}",
+                    ExtCommunitySubType::display(self.low_type),
+                    tunnel_type
+                )
             } else {
-                write!(f, "{} {ip}:{val}", sub_type_str(self.low_type))
+                write!(
+                    f,
+                    "{} {ip}:{val}",
+                    ExtCommunitySubType::display(self.low_type)
+                )
             }
         } else {
             let ip = Ipv4Addr::new(self.val[0], self.val[1], self.val[2], self.val[3]);
             let val = u16::from_be_bytes([self.val[4], self.val[5]]);
-            write!(f, "{} {ip}:{val}", sub_type_str(self.low_type))
+            write!(
+                f,
+                "{} {ip}:{val}",
+                ExtCommunitySubType::display(self.low_type)
+            )
         }
     }
 }
