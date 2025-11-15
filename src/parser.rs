@@ -359,6 +359,13 @@ pub struct Vpnv4Nlri {
     pub nlri: Ipv4Nlri,
 }
 
+#[derive(Debug, Clone)]
+pub struct Vpnv6Nlri {
+    pub label: Label,
+    pub rd: RouteDistinguisher,
+    pub nlri: Ipv6Nlri,
+}
+
 impl ParseNlri<Vpnv4Nlri> for Vpnv4Nlri {
     fn parse_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], Vpnv4Nlri> {
         let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
