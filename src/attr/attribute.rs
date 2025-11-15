@@ -33,7 +33,7 @@ pub struct Rtcv4 {
     pub rt: ExtCommunityValue,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct MpNlriReachAttr {
     pub snpa: u8,
     pub nexthop: Option<IpAddr>,
@@ -44,7 +44,7 @@ pub struct MpNlriReachAttr {
     pub rtcv4_prefix: Vec<Rtcv4>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct MpNlriUnreachAttr {
     pub ipv6_prefix: Vec<Ipv6Nlri>,
     pub ipv6_eor: bool,
@@ -461,5 +461,17 @@ impl fmt::Display for MpNlriUnreachAttr {
             }
         }
         Ok(())
+    }
+}
+
+impl fmt::Debug for MpNlriReachAttr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
+
+impl fmt::Debug for MpNlriUnreachAttr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
     }
 }

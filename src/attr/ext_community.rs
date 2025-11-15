@@ -22,13 +22,6 @@ pub struct ExtCommunityValue {
     pub val: [u8; 6],
 }
 
-#[derive(PartialEq)]
-enum State {
-    Unspec,
-    Rt,
-    Soo,
-}
-
 impl ExtCommunityValue {
     pub fn encode(&self, buf: &mut BytesMut) {
         buf.put_u8(self.high_type);
@@ -115,6 +108,13 @@ impl fmt::Debug for ExtCommunity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "ExtCommunity: {}", self)
     }
+}
+
+#[derive(PartialEq)]
+enum State {
+    Unspec,
+    Rt,
+    Soo,
 }
 
 impl FromStr for ExtCommunity {
