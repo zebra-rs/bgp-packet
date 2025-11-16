@@ -10,7 +10,7 @@ use crate::{
     RouteDistinguisherType, TunnelType,
 };
 
-use super::ext_community_token::{Token, tokenizer};
+use super::ext_com_token::{Token, tokenizer};
 
 #[derive(Clone, Default, NomBE)]
 pub struct ExtCommunity(pub Vec<ExtCommunityValue>);

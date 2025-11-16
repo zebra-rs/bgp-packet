@@ -4,8 +4,9 @@ use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
-use super::ExtCommunitySubType;
-use super::ext_ipv6_community_token::{Token, tokenizer};
+use crate::ExtCommunitySubType;
+
+use super::ext_ipv6_com_token::{Token, tokenizer};
 
 #[derive(Clone, Debug, Default, NomBE)]
 pub struct ExtIpv6Community(pub Vec<ExtIpv6CommunityValue>);
