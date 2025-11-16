@@ -1,10 +1,84 @@
 use std::fmt;
 use std::net::Ipv4Addr;
 
-use crate::{Afi, AttrType, RouteDistinguisher, Safi, Vpnv4Nlri, nlri_psize};
 use bytes::{BufMut, BytesMut};
+use ipnet::Ipv4Net;
+use nom::IResult;
+use nom::bytes::complete::take;
+use nom::error::{ErrorKind, make_error};
+use nom::number::complete::{be_u8, be_u32};
+use nom_derive::*;
 
-use super::{AttrEmitter, AttrFlags};
+use crate::{Afi, AttrType, Label, ParseNlri, RouteDistinguisher, Safi, nlri_psize};
+
+use super::{AttrEmitter, AttrFlags, Ipv4Nlri};
+
+#[derive(Debug, Clone)]
+pub struct Vpnv4Nlri {
+    pub label: Label,
+    pub rd: RouteDistinguisher,
+    pub nlri: Ipv4Nlri,
+}
+
+impl ParseNlri<Vpnv4Nlri> for Vpnv4Nlri {
+    fn parse_nlri(input: &[u8], add_path: bool) -> IResult<&[u8], Vpnv4Nlri> {
+        let (input, id) = if add_path { be_u32(input)? } else { (input, 0) };
+
+        // MPLS Label (3 octets) + RD (8 octets) + IPv4 Prefix (0-4 octets).
+        let (input, mut plen) = be_u8(input)?;
+
+        let psize = nlri_psize(plen);
+        if input.len() < psize {
+            return Err(nom::Err::Error(make_error(input, ErrorKind::Eof)));
+        }
+        // MPLS Label.
+        let (input, label) = take(3usize).parse(input)?;
+        let label = Label::from(label);
+
+        // RD.
+        let (input, rd) = RouteDistinguisher::parse_be(input)?;
+
+        // Adjust plen to MPLS Label and Route Distinguisher.
+        if plen < 88 {
+            // Prefix length must be >= 88.
+            return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+        }
+        plen -= 88;
+        let psize = nlri_psize(plen);
+
+        if psize > 4 {
+            // Prefix size must be 0..=4.
+            return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+        }
+        if psize > input.len() {
+            // Prefix size must be same or smaller than remaining input buffer.
+            return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+        }
+
+        // IPv4 prefix.
+        let mut paddr = [0u8; 4];
+        paddr[..psize].copy_from_slice(&input[..psize]);
+        let (input, _) = take(psize).parse(input)?;
+        let prefix = Ipv4Net::new(Ipv4Addr::from(paddr), plen).expect("Ipv4Net create error");
+
+        let nlri = Ipv4Nlri { id, prefix };
+
+        let vpnv4 = Vpnv4Nlri { label, rd, nlri };
+
+        Ok((input, vpnv4))
+    }
+}
+
+impl fmt::Display for Vpnv4Nlri {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let bos = if self.label.bos { "(BoS)" } else { "" };
+        write!(
+            f,
+            "VPNv4 [{}]:[{}]{} label: {} {}",
+            self.rd, self.nlri.id, self.nlri.prefix, self.label.label, bos,
+        )
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Vpnv4Nexthop {

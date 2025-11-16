@@ -68,7 +68,10 @@ pub mod mp_unreach;
 pub use mp_unreach::*;
 
 pub mod nlri_ipv4;
-//pub use nlri_ipv4::*;
+pub use nlri_ipv4::*;
+
+pub mod nlri_ipv6;
+pub use nlri_ipv6::*;
 
 pub mod nlri_vpnv4;
 pub use nlri_vpnv4::*;
