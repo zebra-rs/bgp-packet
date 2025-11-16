@@ -1,4 +1,3 @@
-pub mod encode;
 pub mod notification;
 pub mod open;
 pub mod packet;
@@ -11,20 +10,14 @@ pub use packet::*;
 pub use parser::*;
 pub use update::*;
 
-pub mod many;
-pub use many::many0;
-
-pub mod cap;
-pub use cap::*;
+pub mod caps;
+pub use caps::*;
 
 pub mod afi;
 pub use afi::*;
 
-pub mod attr;
-pub use attr::*;
-
-pub mod parse_be;
-pub use parse_be::*;
+pub mod attrs;
+pub use attrs::*;
 
 pub mod error;
 pub use error::*;
@@ -38,5 +31,11 @@ pub use bgp_attr::*;
 pub mod bgp_nexthop;
 pub use bgp_nexthop::*;
 
+pub mod many;
+pub use many::many0;
+
+pub mod parse_be;
+pub use parse_be::{ParseBe, ParseNlri};
+
 pub mod util;
-pub use util::*;
+pub use util::u32_u24;

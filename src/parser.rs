@@ -522,7 +522,7 @@ impl UpdatePacket {
         let (input, attr_len) = be_u16(input)?;
         let (input, _, bgp_attr, mp_update, mp_withdraw) =
             parse_bgp_update_attribute(input, attr_len, as4, opt)?;
-        packet.bgp_attr = bgp_attr;
+        packet.bgp_attr = Some(bgp_attr);
         packet.mp_update = mp_update;
         packet.mp_withdraw = mp_withdraw;
         let nlri_len = packet.header.length - BGP_HEADER_LEN - 2 - withdraw_len - 2 - attr_len;
@@ -612,7 +612,7 @@ impl BgpPacket {
             }
             BgpType::Update => {
                 let (input, p) = UpdatePacket::parse_packet(input, as4, opt)?;
-                Ok((input, BgpPacket::Update(p)))
+                Ok((input, BgpPacket::Update(Box::new(p))))
             }
             BgpType::Notification => {
                 let (input, packet) = NotificationPacket::parse_packet(input)?;
@@ -626,15 +626,5 @@ impl BgpPacket {
                 "Unknown BGP packet type".to_string(),
             )),
         }
-    }
-}
-
-impl ParseBe<Ipv4Addr> for Ipv4Addr {
-    fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
-        if input.len() < 4 {
-            return Err(nom::Err::Incomplete(nom::Needed::new(4)));
-        }
-        let (input, addr) = be_u32(input)?;
-        Ok((input, Self::from(addr)))
     }
 }

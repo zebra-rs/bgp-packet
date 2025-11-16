@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
+use bytes::{BufMut, BytesMut};
 use nom::{IResult, number::complete::be_u8};
 use nom_derive::*;
 use serde::Serialize;
@@ -379,5 +380,22 @@ impl NotificationPacket {
             sub_code,
             data,
         }
+    }
+}
+
+impl From<NotificationPacket> for BytesMut {
+    fn from(notification: NotificationPacket) -> Self {
+        let mut buf = BytesMut::new();
+        let header: BytesMut = notification.header.into();
+        buf.put(&header[..]);
+        buf.put_u8(notification.code.into());
+        buf.put_u8(notification.sub_code);
+        buf.put(&notification.data[..]);
+
+        const LENGTH_POS: std::ops::Range<usize> = 16..18;
+        let length: u16 = buf.len() as u16;
+        buf[LENGTH_POS].copy_from_slice(&length.to_be_bytes());
+
+        buf
     }
 }

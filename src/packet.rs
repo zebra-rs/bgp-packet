@@ -1,5 +1,7 @@
-use super::{NotificationPacket, OpenPacket, UpdatePacket};
+use bytes::{BufMut, BytesMut};
 use nom_derive::*;
+
+use crate::{NotificationPacket, OpenPacket, UpdatePacket};
 
 pub const BGP_PACKET_LEN: usize = 4096;
 pub const BGP_HEADER_LEN: u16 = 19;
@@ -33,10 +35,21 @@ impl BgpHeader {
     }
 }
 
+impl From<BgpHeader> for BytesMut {
+    fn from(header: BgpHeader) -> Self {
+        let mut buf = BytesMut::new();
+        buf.put(&header.marker[..]);
+        buf.put_u16(header.length);
+        let typ: u8 = header.typ as u8;
+        buf.put_u8(typ);
+        buf
+    }
+}
+
 #[derive(Debug)]
 pub enum BgpPacket {
     Open(OpenPacket),
     Keepalive(BgpHeader),
     Notification(NotificationPacket),
-    Update(UpdatePacket),
+    Update(Box<UpdatePacket>),
 }
