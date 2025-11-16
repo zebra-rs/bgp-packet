@@ -108,21 +108,41 @@ impl From<UpdatePacket> for BytesMut {
 
 impl fmt::Debug for UpdatePacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for UpdatePacket {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Update Message:")?;
         if let Some(bgp_attr) = &self.bgp_attr {
             write!(f, "{}", bgp_attr)?;
         }
         if !self.ipv4_update.is_empty() {
-            write!(f, "\n IPv4 Updates:")?;
+            writeln!(f, " IPv4 Updates:")?;
             for update in self.ipv4_update.iter() {
-                write!(f, "\n  {}", update.prefix)?;
+                writeln!(f, "  {}", update.prefix)?;
             }
         }
         if !self.ipv4_withdraw.is_empty() {
-            write!(f, "\n IPv4 Withdraw:")?;
+            writeln!(f, " IPv4 Withdraw:")?;
             for withdraw in self.ipv4_withdraw.iter() {
-                write!(f, "\n  {}", withdraw.prefix)?;
+                writeln!(f, "  {}", withdraw.prefix)?;
             }
+        }
+        if let Some(mp_update) = &self.mp_update {
+            write!(f, "{}", mp_update)?;
+        }
+        if let Some(mp_withdraw) = &self.mp_withdraw {
+            write!(f, "{}", mp_withdraw)?;
+        }
+        if self.bgp_attr.is_none()
+            && self.mp_update.is_none()
+            && self.mp_withdraw.is_none()
+            && self.ipv4_update.is_empty()
+            && self.ipv4_withdraw.is_empty()
+        {
+            writeln!(f, " EoR: IPv4/Unicast")?;
         }
         Ok(())
     }
@@ -144,9 +164,12 @@ impl UpdatePacket {
         let (input, mut withdrawal) = parse_bgp_nlri_ipv4(input, withdraw_len, add_path)?;
         packet.ipv4_withdraw.append(&mut withdrawal);
         let (input, attr_len) = be_u16(input)?;
-        let (input, _, bgp_attr, mp_update, mp_withdraw) =
-            parse_bgp_update_attribute(input, attr_len, as4, opt)?;
-        packet.bgp_attr = Some(bgp_attr);
+        let (input, bgp_attr, mp_update, mp_withdraw) = if attr_len > 0 {
+            parse_bgp_update_attribute(input, attr_len, as4, opt)?
+        } else {
+            (input, None, None, None)
+        };
+        packet.bgp_attr = bgp_attr;
         packet.mp_update = mp_update;
         packet.mp_withdraw = mp_withdraw;
         let nlri_len = packet.header.length - BGP_HEADER_LEN - 2 - withdraw_len - 2 - attr_len;

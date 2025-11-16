@@ -42,6 +42,6 @@ impl CapEmit for CapMultiProtocol {
 
 impl fmt::Display for CapMultiProtocol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MultiProtocol: {} {}", self.afi, self.safi)
+        write!(f, "MultiProtocol: {}/{}", self.afi, self.safi)
     }
 }

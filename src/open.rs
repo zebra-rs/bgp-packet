@@ -89,9 +89,6 @@ impl From<OpenPacket> for BytesMut {
         // Opt param buffer.
         let mut opt_buf = BytesMut::new();
         open.bgp_cap.emit(&mut opt_buf);
-        // for cap in open.caps.iter() {
-        //     cap.encode(&mut opt_buf);
-        // }
 
         // Extended opt param length as defined in RFC9072.
         let opt_param_len = opt_buf.len();
@@ -114,8 +111,7 @@ impl From<OpenPacket> for BytesMut {
 
 impl fmt::Display for OpenPacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Open Message:")?;
-        write!(f, "\n Capability")?;
+        writeln!(f, "Open Message:")?;
         write!(f, "{}", self.bgp_cap)?;
         Ok(())
     }

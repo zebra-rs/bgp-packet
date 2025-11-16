@@ -9,7 +9,7 @@ use crate::{
     CapRestart, CapVersion, CapabilityPacket, LLGRValue, PathLimitValue, RestartValue,
 };
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct BgpCap {
     pub mp: BTreeMap<AfiSafi, CapMultiProtocol>,
     pub refresh: Option<CapRefresh>,
@@ -161,59 +161,59 @@ impl BgpCap {
 impl fmt::Display for BgpCap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (_, v) in self.mp.iter() {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if let Some(v) = &self.refresh {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if let Some(v) = &self.refresh_cisco {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if let Some(v) = &self.enhanced_refresh {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if let Some(v) = &self.extended {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if !self.restart.is_empty() {
             let mut v = CapRestart::default();
             for (_, val) in self.restart.iter() {
                 v.values.push(val.clone());
             }
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if let Some(v) = &self.as4 {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if let Some(v) = &self.dynamic {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if !self.addpath.is_empty() {
             let mut v = CapAddPath::default();
             for (_, val) in self.addpath.iter() {
                 v.values.push(val.clone());
             }
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if !self.llgr.is_empty() {
             let mut v = CapLlgr::default();
             for (_, val) in self.llgr.iter() {
                 v.values.push(val.clone());
             }
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if let Some(v) = &self.fqdn {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if let Some(v) = &self.version {
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         if !self.path_limit.is_empty() {
             let mut v = CapPathLimit::default();
             for (_, val) in self.path_limit.iter() {
                 v.values.push(val.clone());
             }
-            write!(f, "{}", v)?;
+            writeln!(f, " {}", v)?;
         }
         Ok(())
     }

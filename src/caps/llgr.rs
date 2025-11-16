@@ -83,10 +83,10 @@ impl fmt::Display for CapLlgr {
             }
             let _ = write!(
                 f,
-                "{}/{} flags: {} stale time: {}",
+                "{}/{} F:{} StaleTime:{}",
                 value.afi,
                 value.safi,
-                if value.flags.f_bit() { "F" } else { "" },
+                if value.flags.f_bit() { 1 } else { 0 },
                 value.stale_time
             );
         }

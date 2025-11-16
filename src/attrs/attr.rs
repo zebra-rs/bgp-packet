@@ -280,8 +280,7 @@ pub fn parse_bgp_update_attribute(
 ) -> Result<
     (
         &[u8],
-        Vec<Attr>,
-        BgpAttr,
+        Option<BgpAttr>,
         Option<MpNlriReachAttr>,
         Option<MpNlriUnreachAttr>,
     ),
@@ -362,5 +361,5 @@ pub fn parse_bgp_update_attribute(
         remaining = new_remaining;
     }
 
-    Ok((input, Vec::new(), bgp_attr, mp_update, mp_withdraw))
+    Ok((input, Some(bgp_attr), mp_update, mp_withdraw))
 }
