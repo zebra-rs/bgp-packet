@@ -6,7 +6,7 @@ use nom::IResult;
 use nom::number::complete::{be_u8, be_u24};
 use nom_derive::*;
 
-use crate::{Afi, CapCode, Emit, ParseBe, Safi, u32_u24};
+use crate::{Afi, CapCode, CapEmit, ParseBe, Safi, u32_u24};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapLlgr {
@@ -37,8 +37,8 @@ impl ParseBe<LLGRFlags> for LLGRFlags {
 
 #[derive(Debug, PartialEq, NomBE, Clone)]
 pub struct LLGRValue {
-    afi: Afi,
-    safi: Safi,
+    pub afi: Afi,
+    pub safi: Safi,
     flags: LLGRFlags,
     #[nom(Parse = "be_u24")]
     stale_time: u32,
@@ -55,7 +55,7 @@ impl LLGRValue {
     }
 }
 
-impl Emit for CapLlgr {
+impl CapEmit for CapLlgr {
     fn code(&self) -> CapCode {
         CapCode::LlgrOld
     }

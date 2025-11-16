@@ -2,12 +2,12 @@ use std::fmt;
 
 use nom_derive::*;
 
-use super::{CapCode, Emit};
+use super::{CapCode, CapEmit};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapExtended {}
 
-impl Emit for CapExtended {
+impl CapEmit for CapExtended {
     fn code(&self) -> CapCode {
         CapCode::ExtendedMessage
     }

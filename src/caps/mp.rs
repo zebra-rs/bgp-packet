@@ -4,14 +4,14 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use serde::Serialize;
 
-use super::{CapCode, Emit};
+use super::{CapCode, CapEmit};
 use crate::{Afi, Safi};
 
 #[derive(Debug, PartialEq, NomBE, Clone, Eq, Hash, Serialize)]
 pub struct CapMultiProtocol {
-    afi: Afi,
+    pub afi: Afi,
     res: u8,
-    safi: Safi,
+    pub safi: Safi,
 }
 
 impl CapMultiProtocol {
@@ -24,7 +24,7 @@ impl CapMultiProtocol {
     }
 }
 
-impl Emit for CapMultiProtocol {
+impl CapEmit for CapMultiProtocol {
     fn code(&self) -> CapCode {
         CapCode::MultiProtocol
     }

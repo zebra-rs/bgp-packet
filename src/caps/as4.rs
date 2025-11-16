@@ -3,7 +3,7 @@ use std::fmt;
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{CapCode, Emit};
+use super::{CapCode, CapEmit};
 
 #[derive(Debug, PartialEq, NomBE, Clone)]
 pub struct CapAs4 {
@@ -16,7 +16,7 @@ impl CapAs4 {
     }
 }
 
-impl Emit for CapAs4 {
+impl CapEmit for CapAs4 {
     fn code(&self) -> CapCode {
         CapCode::As4
     }

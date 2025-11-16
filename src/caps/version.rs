@@ -3,7 +3,7 @@ use std::fmt;
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{CapCode, Emit};
+use super::{CapCode, CapEmit};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapVersion {
@@ -18,7 +18,7 @@ impl CapVersion {
     }
 }
 
-impl Emit for CapVersion {
+impl CapEmit for CapVersion {
     fn code(&self) -> CapCode {
         CapCode::SoftwareVersion
     }

@@ -41,4 +41,4 @@ pub mod unknown;
 pub use unknown::CapUnknown;
 
 pub mod emit;
-pub use emit::Emit;
+pub use emit::CapEmit;

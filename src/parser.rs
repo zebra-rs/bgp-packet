@@ -66,7 +66,7 @@ impl BgpPacket {
         match header.typ {
             BgpType::Open => {
                 let (input, packet) = OpenPacket::parse_packet(input)?;
-                Ok((input, BgpPacket::Open(packet)))
+                Ok((input, BgpPacket::Open(Box::new(packet))))
             }
             BgpType::Update => {
                 let (input, p) = UpdatePacket::parse_packet(input, as4, opt)?;

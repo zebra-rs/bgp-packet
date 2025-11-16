@@ -3,7 +3,7 @@ use std::fmt;
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{CapCode, CapabilityHeader, Emit};
+use super::{CapCode, CapEmit, CapabilityHeader};
 
 #[derive(Debug, PartialEq, NomBE, Clone)]
 pub struct CapUnknown {
@@ -20,7 +20,7 @@ impl Default for CapUnknown {
     }
 }
 
-impl Emit for CapUnknown {
+impl CapEmit for CapUnknown {
     fn code(&self) -> CapCode {
         CapCode::Unknown(100)
     }

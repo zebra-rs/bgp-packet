@@ -2,12 +2,12 @@ use std::fmt;
 
 use nom_derive::*;
 
-use super::{CapCode, Emit};
+use super::{CapCode, CapEmit};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapRefresh {}
 
-impl Emit for CapRefresh {
+impl CapEmit for CapRefresh {
     fn code(&self) -> CapCode {
         CapCode::RouteRefresh
     }
@@ -16,7 +16,7 @@ impl Emit for CapRefresh {
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapRefreshCisco {}
 
-impl Emit for CapRefreshCisco {
+impl CapEmit for CapRefreshCisco {
     fn code(&self) -> CapCode {
         CapCode::RouteRefreshCisco
     }
@@ -25,7 +25,7 @@ impl Emit for CapRefreshCisco {
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapEnhancedRefresh {}
 
-impl Emit for CapEnhancedRefresh {
+impl CapEmit for CapEnhancedRefresh {
     fn code(&self) -> CapCode {
         CapCode::EnhancedRouteRefresh
     }

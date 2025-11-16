@@ -6,7 +6,7 @@ use nom::bytes::complete::take;
 use nom::number::complete::be_u8;
 use nom_derive::*;
 
-use super::{CapCode, Emit};
+use super::{CapCode, CapEmit};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct CapFqdn {
@@ -23,7 +23,7 @@ impl CapFqdn {
     }
 }
 
-impl Emit for CapFqdn {
+impl CapEmit for CapFqdn {
     fn code(&self) -> CapCode {
         CapCode::Fqdn
     }

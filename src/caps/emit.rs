@@ -4,7 +4,7 @@ use super::CapCode;
 
 const CAPABILITY_CODE: u8 = 2;
 
-pub trait Emit {
+pub trait CapEmit {
     fn code(&self) -> CapCode;
 
     fn len(&self) -> u8 {

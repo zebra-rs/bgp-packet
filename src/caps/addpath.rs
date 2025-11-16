@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 use nom::{IResult, number::complete::be_u8};
 use nom_derive::*;
 
-use super::{CapCode, Emit};
+use super::{CapCode, CapEmit};
 use crate::{Afi, Safi};
 
 #[derive(Debug, PartialEq, NomBE, Clone, Ord, PartialOrd, Eq)]
@@ -109,7 +109,7 @@ impl CapAddPath {
     }
 }
 
-impl Emit for CapAddPath {
+impl CapEmit for CapAddPath {
     fn code(&self) -> CapCode {
         CapCode::AddPath
     }

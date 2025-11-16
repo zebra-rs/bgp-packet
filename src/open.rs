@@ -6,8 +6,7 @@ use nom::IResult;
 use nom::error::{ErrorKind, make_error};
 use nom_derive::*;
 
-use super::caps::{CapabilityHeader, CapabilityPacket};
-use super::{BgpHeader, many0};
+use crate::{BgpCap, BgpHeader, CapabilityHeader, CapabilityPacket, many0};
 
 pub const BGP_VERSION: u8 = 4;
 
@@ -20,7 +19,7 @@ pub struct OpenPacket {
     pub bgp_id: [u8; 4],
     pub opt_param_len: u8,
     #[nom(Ignore)]
-    pub caps: Vec<CapabilityPacket>,
+    pub bgp_cap: BgpCap,
 }
 
 #[derive(Debug, PartialEq, NomBE)]
@@ -35,7 +34,7 @@ impl OpenPacket {
         asn: u16,
         hold_time: u16,
         router_id: &Ipv4Addr,
-        caps: Vec<CapabilityPacket>,
+        bgp_cap: BgpCap,
     ) -> OpenPacket {
         OpenPacket {
             header,
@@ -44,7 +43,7 @@ impl OpenPacket {
             hold_time,
             bgp_id: router_id.octets(),
             opt_param_len: 0,
-            caps,
+            bgp_cap,
         }
     }
 
@@ -64,9 +63,8 @@ impl OpenPacket {
         }
         let (opts, input) = input.split_at(len as usize);
         let (_, caps) = many0(parse_caps).parse(opts)?;
-        for mut cap in caps.into_iter() {
-            packet.caps.append(&mut cap);
-        }
+        let bgp_cap = BgpCap::from(caps);
+        packet.bgp_cap = bgp_cap;
         Ok((input, packet))
     }
 }
@@ -90,9 +88,10 @@ impl From<OpenPacket> for BytesMut {
 
         // Opt param buffer.
         let mut opt_buf = BytesMut::new();
-        for cap in open.caps.iter() {
-            cap.encode(&mut opt_buf);
-        }
+        open.bgp_cap.emit(&mut opt_buf);
+        // for cap in open.caps.iter() {
+        //     cap.encode(&mut opt_buf);
+        // }
 
         // Extended opt param length as defined in RFC9072.
         let opt_param_len = opt_buf.len();
@@ -117,9 +116,7 @@ impl fmt::Display for OpenPacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Open Message:")?;
         write!(f, "\n Capability")?;
-        for cap in self.caps.iter() {
-            write!(f, "\n  {}", cap)?;
-        }
+        write!(f, "{}", self.bgp_cap)?;
         Ok(())
     }
 }

@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{Afi, CapCode, Emit, Safi};
+use crate::{Afi, CapCode, CapEmit, Safi};
 
 #[bitfield(u16, debug = true)]
 #[derive(Serialize, Deserialize, PartialEq, NomBE)]
@@ -50,7 +50,7 @@ pub struct CapRestart {
     pub values: Vec<RestartValue>,
 }
 
-impl Emit for CapRestart {
+impl CapEmit for CapRestart {
     fn code(&self) -> CapCode {
         CapCode::GracefulRestart
     }

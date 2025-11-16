@@ -3,10 +3,10 @@ use std::fmt;
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{CapCode, Emit};
+use super::{CapCode, CapEmit};
 use crate::{Afi, Safi};
 
-#[derive(Debug, PartialEq, NomBE, Clone)]
+#[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapPathLimit {
     pub values: Vec<PathLimitValue>,
 }
@@ -30,7 +30,7 @@ impl CapPathLimit {
     }
 }
 
-impl Emit for CapPathLimit {
+impl CapEmit for CapPathLimit {
     fn code(&self) -> CapCode {
         CapCode::PathLimit
     }
