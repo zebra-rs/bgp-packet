@@ -348,7 +348,7 @@ pub fn parse_bgp_update_attribute(
                     updates: _,
                 } = &v
                 {
-                    bgp_attr.nexthop = Some(BgpNexthop::Evpn(nhop.clone()));
+                    bgp_attr.nexthop = Some(BgpNexthop::Evpn(*nhop));
                 }
                 mp_update = Some(v);
             }
