@@ -272,20 +272,22 @@ impl Attr {
     }
 }
 
-pub fn parse_bgp_update_attribute(
-    input: &[u8],
-    length: u16,
-    as4: bool,
-    opt: Option<ParseOption>,
-) -> Result<
+type ParsedAttributes<'a> = Result<
     (
-        &[u8],
+        &'a [u8],
         Option<BgpAttr>,
         Option<MpNlriReachAttr>,
         Option<MpNlriUnreachAttr>,
     ),
     BgpParseError,
-> {
+>;
+
+pub fn parse_bgp_update_attribute(
+    input: &[u8],
+    length: u16,
+    as4: bool,
+    opt: Option<ParseOption>,
+) -> ParsedAttributes<'_> {
     let (attr, input) = input.split_at(length as usize);
     let mut remaining = attr;
     let mut bgp_attr = BgpAttr::default();

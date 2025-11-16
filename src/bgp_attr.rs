@@ -59,11 +59,11 @@ impl BgpAttr {
         if let Some(v) = &self.aspath {
             v.attr_emit(buf);
         }
-        if let Some(v) = &self.nexthop {
-            if let BgpNexthop::Ipv4(addr) = v {
-                let nexthop = NexthopAttr { nexthop: *addr };
-                nexthop.attr_emit(buf);
-            }
+        if let Some(v) = &self.nexthop
+            && let BgpNexthop::Ipv4(addr) = v
+        {
+            let nexthop = NexthopAttr { nexthop: *addr };
+            nexthop.attr_emit(buf);
         }
         if let Some(v) = &self.med {
             v.attr_emit(buf);
@@ -119,28 +119,28 @@ impl fmt::Display for BgpAttr {
             writeln!(f, " Atomic Aggregate")?;
         }
         if let Some(v) = &self.aggregator {
-            writeln!(f, " {}", v)?;
+            writeln!(f, " Aggregator: {}", v)?;
         }
         if let Some(v) = &self.com {
-            writeln!(f, "{}", v)?;
+            writeln!(f, " Community: {}", v)?;
         }
         if let Some(v) = &self.originator_id {
-            writeln!(f, " {}", v)?;
+            writeln!(f, " OriginatorId: {}", v)?;
         }
         if let Some(v) = &self.cluster_list {
-            writeln!(f, " {}", v)?;
+            writeln!(f, " ClusterList: {}", v)?;
         }
         if let Some(v) = &self.ecom {
-            writeln!(f, " {}", v)?;
+            writeln!(f, " ExtCommunity: {}", v)?;
         }
         if let Some(v) = &self.pmsi_tunnel {
-            writeln!(f, " {}", v)?;
+            writeln!(f, " PMSI Tunnel: {}", v)?;
         }
         if let Some(v) = &self.aigp {
             writeln!(f, " AIGP: {}", v)?;
         }
         if let Some(v) = &self.lcom {
-            writeln!(f, " {}", v)?;
+            writeln!(f, " LargeCommunity: {}", v)?;
         }
         // Nexthop
         if let Some(v) = &self.nexthop {
