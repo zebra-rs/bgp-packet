@@ -5,7 +5,7 @@ use nom::bytes::complete::take;
 use nom::number::complete::be_u8;
 use nom_derive::*;
 
-use crate::{BgpAttr, BgpNexthop, BgpParseError, ParseBe, ParseOption, set_parse_context};
+use crate::{BgpAttr, BgpNexthop, BgpParseError, ParseBe, ParseOption};
 
 use super::*;
 
@@ -238,20 +238,35 @@ impl Attr {
         }
         let (attr_payload, input) = input.split_at(attr_len as usize);
 
-        // Set parse context for MP_NLRI attributes
-        set_parse_context((*opt).clone());
-
         // Parse the attribute using the appropriate selector with error context
-        let (_, attr) =
-            Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt)).map_err(|e| {
+        let (_, attr) = match attr_type {
+            AttrType::MpReachNlri => {
+                let (remaining, mp_reach) =
+                    MpNlriReachAttr::parse_nlri_opt(attr_payload, opt.clone()).map_err(|e| {
+                        BgpParseError::AttributeParseError {
+                            attr_type,
+                            source: Box::new(BgpParseError::from(e)),
+                        }
+                    })?;
+                (remaining, Attr::MpReachNlri(mp_reach))
+            }
+            AttrType::MpUnreachNlri => {
+                let (remaining, mp_unreach) =
+                    MpNlriUnreachAttr::parse_nlri_opt(attr_payload, opt.clone()).map_err(|e| {
+                        BgpParseError::AttributeParseError {
+                            attr_type,
+                            source: Box::new(BgpParseError::from(e)),
+                        }
+                    })?;
+                (remaining, Attr::MpUnreachNlri(mp_unreach))
+            }
+            _ => Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt)).map_err(|e| {
                 BgpParseError::AttributeParseError {
                     attr_type,
                     source: Box::new(BgpParseError::from(e)),
                 }
-            })?;
-
-        // Clear parse context
-        set_parse_context(None);
+            })?,
+        };
 
         Ok((input, attr))
     }
@@ -274,7 +289,6 @@ pub fn parse_bgp_update_attribute(
 > {
     let (attr, input) = input.split_at(length as usize);
     let mut remaining = attr;
-    // let mut attrs = Vec::new();
     let mut bgp_attr = BgpAttr::default();
     let mut mp_update: Option<MpNlriReachAttr> = None;
     let mut mp_withdraw: Option<MpNlriUnreachAttr> = None;
