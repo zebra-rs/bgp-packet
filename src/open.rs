@@ -1,11 +1,12 @@
 use std::fmt;
 use std::net::Ipv4Addr;
 
+use bytes::{BufMut, BytesMut};
 use nom::IResult;
 use nom::error::{ErrorKind, make_error};
 use nom_derive::*;
 
-use super::cap::{CapabilityHeader, CapabilityPacket};
+use super::caps::{CapabilityHeader, CapabilityPacket};
 use super::{BgpHeader, many0};
 
 pub const BGP_VERSION: u8 = 4;
@@ -75,6 +76,41 @@ fn parse_caps(input: &[u8]) -> IResult<&[u8], Vec<CapabilityPacket>> {
     let (opts, input) = input.split_at(header.length as usize);
     let (_, caps) = many0(CapabilityPacket::parse_cap).parse(opts)?;
     Ok((input, caps))
+}
+
+impl From<OpenPacket> for BytesMut {
+    fn from(open: OpenPacket) -> Self {
+        let mut buf = BytesMut::new();
+        let header: BytesMut = open.header.into();
+        buf.put(&header[..]);
+        buf.put_u8(open.version);
+        buf.put_u16(open.asn);
+        buf.put_u16(open.hold_time);
+        buf.put(&open.bgp_id[..]);
+
+        // Opt param buffer.
+        let mut opt_buf = BytesMut::new();
+        for cap in open.caps.iter() {
+            cap.encode(&mut opt_buf);
+        }
+
+        // Extended opt param length as defined in RFC9072.
+        let opt_param_len = opt_buf.len();
+        if opt_param_len < 255 {
+            buf.put_u8(opt_param_len as u8);
+        } else {
+            buf.put_u8(255u8);
+            buf.put_u8(255u8);
+            buf.put_u16(opt_param_len as u16);
+        }
+        buf.put(&opt_buf[..]);
+
+        const LENGTH_POS: std::ops::Range<usize> = 16..18;
+        let length: u16 = buf.len() as u16;
+        buf[LENGTH_POS].copy_from_slice(&length.to_be_bytes());
+
+        buf
+    }
 }
 
 impl fmt::Display for OpenPacket {

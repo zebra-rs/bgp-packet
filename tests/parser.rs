@@ -3,15 +3,13 @@ use hex_literal::hex;
 
 fn test1(buf: &[u8]) {
     // Parse with AS4 = truue.
-    let packet = parse_bgp_packet(buf, true, None);
+    let packet = BgpPacket::parse_packet(buf, true, None);
     assert!(packet.is_ok());
 
     let (_, packet) = packet.unwrap();
     if let BgpPacket::Update(update) = packet {
-        for attr in update.attrs.iter() {
-            if let Attr::MpUnreachNlri(MpNlriUnreachAttr::Evpn(evpn_routes)) = attr {
-                assert!(evpn_routes.len() == 1);
-            }
+        if let Some(MpNlriUnreachAttr::Evpn(evpn_routes)) = update.mp_withdraw {
+            assert!(evpn_routes.len() == 1);
         }
     } else {
         panic!("Packet must be Update");
@@ -20,16 +18,14 @@ fn test1(buf: &[u8]) {
 
 fn test2(buf: &[u8]) {
     // Parse with AS4 = truue.
-    let packet = parse_bgp_packet(buf, true, None);
+    let packet = BgpPacket::parse_packet(buf, true, None);
     assert!(packet.is_ok());
 
     let (_, packet) = packet.unwrap();
     if let BgpPacket::Update(update) = packet {
         println!("{:?}", update);
-        for attr in update.attrs.iter() {
-            if let Attr::MpUnreachNlri(MpNlriUnreachAttr::Evpn(evpn_routes)) = attr {
-                assert!(evpn_routes.len() == 2);
-            }
+        if let Some(MpNlriUnreachAttr::Evpn(evpn_routes)) = update.mp_withdraw {
+            assert!(evpn_routes.len() == 2);
         }
     } else {
         panic!("Packet must be Update");
@@ -99,7 +95,7 @@ ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
 01 01 01 00 0c 20 01 01 01 01
 "
     );
-    let packet = parse_bgp_packet(PACKET, true, None);
+    let packet = BgpPacket::parse_packet(PACKET, true, None);
     assert!(packet.is_ok());
     let (_, packet) = packet.unwrap();
     if let BgpPacket::Update(update) = packet {

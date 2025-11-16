@@ -1,4 +1,4 @@
-use bgp_packet::{BgpParseError, parse_bgp_packet};
+use bgp_packet::{BgpPacket, BgpParseError};
 use hex_literal::hex;
 
 #[test]
@@ -15,7 +15,7 @@ fn test_attribute_parse_error_context() {
         "00"   // Truncated data
     );
 
-    let result = parse_bgp_packet(&invalid_update, false, None);
+    let result = BgpPacket::parse_packet(&invalid_update, false, None);
 
     match result {
         Err(BgpParseError::IncompleteData { needed }) => {
