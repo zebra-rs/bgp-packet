@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
 use bytes::{BufMut, BytesMut};
+use nom::bytes::complete::take;
 use nom::{IResult, number::complete::be_u8};
 use nom_derive::*;
 use serde::Serialize;
@@ -397,5 +398,14 @@ impl From<NotificationPacket> for BytesMut {
         buf[LENGTH_POS].copy_from_slice(&length.to_be_bytes());
 
         buf
+    }
+}
+
+impl NotificationPacket {
+    pub fn parse_packet(input: &[u8]) -> IResult<&[u8], NotificationPacket> {
+        let (input, packet) = NotificationPacket::parse_be(input)?;
+        let len = packet.header.length - BGP_HEADER_LEN - 2;
+        let (input, _data) = take(len as usize).parse(input)?;
+        Ok((input, packet))
     }
 }

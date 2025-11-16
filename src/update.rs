@@ -1,11 +1,13 @@
 use std::fmt;
 
 use bytes::{BufMut, BytesMut};
+use nom::number::complete::be_u16;
 use nom_derive::*;
 
 use crate::{
-    BGP_HEADER_LEN, BgpAttr, BgpHeader, BgpType, Ipv4Nlri, MpNlriReachAttr, MpNlriUnreachAttr,
-    nlri_psize,
+    Afi, BGP_HEADER_LEN, BgpAttr, BgpHeader, BgpParseError, BgpType, Ipv4Nlri, MpNlriReachAttr,
+    MpNlriUnreachAttr, ParseOption, Safi, nlri_psize, parse_bgp_nlri_ipv4,
+    parse_bgp_update_attribute,
 };
 
 #[derive(NomBE)]
@@ -123,5 +125,33 @@ impl fmt::Debug for UpdatePacket {
             }
         }
         Ok(())
+    }
+}
+
+impl UpdatePacket {
+    pub fn parse_packet(
+        input: &[u8],
+        as4: bool,
+        opt: Option<ParseOption>,
+    ) -> Result<(&[u8], UpdatePacket), BgpParseError> {
+        let add_path = if let Some(o) = opt.as_ref() {
+            o.is_add_path_recv(Afi::Ip, Safi::Unicast)
+        } else {
+            false
+        };
+        let (input, mut packet) = UpdatePacket::parse_be(input)?;
+        let (input, withdraw_len) = be_u16(input)?;
+        let (input, mut withdrawal) = parse_bgp_nlri_ipv4(input, withdraw_len, add_path)?;
+        packet.ipv4_withdraw.append(&mut withdrawal);
+        let (input, attr_len) = be_u16(input)?;
+        let (input, _, bgp_attr, mp_update, mp_withdraw) =
+            parse_bgp_update_attribute(input, attr_len, as4, opt)?;
+        packet.bgp_attr = Some(bgp_attr);
+        packet.mp_update = mp_update;
+        packet.mp_withdraw = mp_withdraw;
+        let nlri_len = packet.header.length - BGP_HEADER_LEN - 2 - withdraw_len - 2 - attr_len;
+        let (input, mut updates) = parse_bgp_nlri_ipv4(input, nlri_len, add_path)?;
+        packet.ipv4_update.append(&mut updates);
+        Ok((input, packet))
     }
 }
