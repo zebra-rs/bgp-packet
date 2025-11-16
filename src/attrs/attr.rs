@@ -1,278 +1,352 @@
 use std::fmt;
-use std::net::Ipv4Addr;
 
-use bytes::{BufMut, BytesMut};
-use ipnet::Ipv6Net;
-use nom::{
-    IResult,
-    bytes::complete::take,
-    error::{ErrorKind, make_error},
-    number::complete::{be_u8, be_u24, be_u32},
-};
+use bytes::BytesMut;
+use nom::bytes::complete::take;
+use nom::number::complete::be_u8;
 use nom_derive::*;
 
-use crate::attrs::emitter::AttrEmitter;
-use crate::{
-    Afi, AttrFlags, AttrType, ExtCommunityValue, ParseBe, ParseNlri, RouteDistinguisher, Safi,
-    Vpnv4Nlri, many0, nlri_psize,
-};
+use crate::{BgpAttr, BgpNexthop, BgpParseError, ParseBe, ParseOption, set_parse_context};
 
-#[derive(Debug, Clone)]
-pub struct Rtcv4 {
-    pub id: u32,
-    pub asn: u32,
-    pub rt: ExtCommunityValue,
-}
+use super::*;
 
-impl ParseNlri<Rtcv4> for Rtcv4 {
-    fn parse_nlri(input: &[u8], addpath: bool) -> IResult<&[u8], Rtcv4> {
-        let (input, id) = if addpath { be_u32(input)? } else { (input, 0) };
-        let (input, plen) = be_u8(input)?;
-        if plen != 96 {
-            return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
-        }
-        let (input, asn) = be_u32(input)?;
-        let (input, rt) = ExtCommunityValue::parse_be(input)?;
-        let nlri = Rtcv4 { id, asn, rt };
-        Ok((input, nlri))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum EvpnRouteType {
-    EthernetAd,    // 1
-    MacIpAdvRoute, // 2
-    IncMulticast,  // 3
-    EthernetSr,    // 4
+#[repr(u8)]
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum AttrType {
+    Origin = 1,
+    AsPath = 2,
+    NextHop = 3,
+    Med = 4,
+    LocalPref = 5,
+    AtomicAggregate = 6,
+    Aggregator = 7,
+    Community = 8,
+    OriginatorId = 9,
+    ClusterList = 10,
+    MpReachNlri = 14,
+    MpUnreachNlri = 15,
+    ExtendedCom = 16,
+    PmsiTunnel = 22,
+    ExtendedIpv6Com = 25,
+    Aigp = 26,
+    LargeCom = 32,
     Unknown(u8),
 }
 
-impl From<EvpnRouteType> for u8 {
-    fn from(val: EvpnRouteType) -> u8 {
-        use EvpnRouteType::*;
-        match val {
-            EthernetAd => 1,
-            MacIpAdvRoute => 2,
-            IncMulticast => 3,
-            EthernetSr => 4,
-            Unknown(val) => val,
+impl From<u8> for AttrType {
+    fn from(attr_type: u8) -> Self {
+        use AttrType::*;
+        match attr_type {
+            1 => Origin,
+            2 => AsPath,
+            3 => NextHop,
+            4 => Med,
+            5 => LocalPref,
+            6 => AtomicAggregate,
+            7 => Aggregator,
+            8 => Community,
+            9 => OriginatorId,
+            10 => ClusterList,
+            14 => MpReachNlri,
+            15 => MpUnreachNlri,
+            16 => ExtendedCom,
+            22 => PmsiTunnel,
+            25 => ExtendedIpv6Com,
+            26 => Aigp,
+            32 => LargeCom,
+            v => Unknown(v),
         }
     }
 }
 
-impl From<u8> for EvpnRouteType {
-    fn from(val: u8) -> Self {
-        use EvpnRouteType::*;
-        match val {
-            1 => EthernetAd,
-            2 => MacIpAdvRoute,
-            3 => IncMulticast,
-            4 => EthernetSr,
-            _ => Unknown(val),
+impl From<AttrType> for u8 {
+    fn from(attr_type: AttrType) -> Self {
+        use AttrType::*;
+        match attr_type {
+            Origin => 1,
+            AsPath => 2,
+            NextHop => 3,
+            Med => 4,
+            LocalPref => 5,
+            AtomicAggregate => 6,
+            Aggregator => 7,
+            Community => 8,
+            OriginatorId => 9,
+            ClusterList => 10,
+            MpReachNlri => 14,
+            MpUnreachNlri => 15,
+            ExtendedCom => 16,
+            PmsiTunnel => 22,
+            ExtendedIpv6Com => 25,
+            Aigp => 26,
+            LargeCom => 32,
+            Unknown(v) => v,
         }
     }
 }
 
-#[derive(Debug)]
-pub struct Evpn {
-    pub route_type: EvpnRouteType,
-    pub rd: RouteDistinguisher,
-    pub ether_tag: u32,
+struct AttrSelector(AttrType, Option<bool>);
+
+#[derive(NomBE, Clone)]
+#[nom(Selector = "AttrSelector")]
+pub enum Attr {
+    #[nom(Selector = "AttrSelector(AttrType::Origin, None)")]
+    Origin(Origin),
+    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(false))")]
+    As2Path(As2Path),
+    #[nom(Selector = "AttrSelector(AttrType::AsPath, Some(true))")]
+    As4Path(As4Path),
+    #[nom(Selector = "AttrSelector(AttrType::NextHop, None)")]
+    NextHop(NexthopAttr),
+    #[nom(Selector = "AttrSelector(AttrType::Med, None)")]
+    Med(Med),
+    #[nom(Selector = "AttrSelector(AttrType::LocalPref, None)")]
+    LocalPref(LocalPref),
+    #[nom(Selector = "AttrSelector(AttrType::AtomicAggregate, None)")]
+    AtomicAggregate(AtomicAggregate),
+    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(false))")]
+    Aggregator2(Aggregator2),
+    #[nom(Selector = "AttrSelector(AttrType::Aggregator, Some(true))")]
+    Aggregator(Aggregator),
+    #[nom(Selector = "AttrSelector(AttrType::Community, None)")]
+    Community(Community),
+    #[nom(Selector = "AttrSelector(AttrType::OriginatorId, None)")]
+    OriginatorId(OriginatorId),
+    #[nom(Selector = "AttrSelector(AttrType::ClusterList, None)")]
+    ClusterList(ClusterList),
+    #[nom(Selector = "AttrSelector(AttrType::MpReachNlri, None)")]
+    MpReachNlri(MpNlriReachAttr),
+    #[nom(Selector = "AttrSelector(AttrType::MpUnreachNlri, None)")]
+    MpUnreachNlri(MpNlriUnreachAttr),
+    #[nom(Selector = "AttrSelector(AttrType::ExtendedCom, None)")]
+    ExtendedCom(ExtCommunity),
+    #[nom(Selector = "AttrSelector(AttrType::PmsiTunnel, None)")]
+    PmsiTunnel(PmsiTunnel),
+    #[nom(Selector = "AttrSelector(AttrType::Aigp, None)")]
+    Aigp(Aigp),
+    #[nom(Selector = "AttrSelector(AttrType::LargeCom, None)")]
+    LargeCom(LargeCommunity),
 }
 
-#[derive(Debug, Clone)]
-pub enum EvpnRoute {
-    Mac(EvpnMac),
-    Multicast(EvpnMulticast),
+impl Attr {
+    pub fn emit(&self, buf: &mut BytesMut) {
+        match self {
+            Attr::Origin(v) => v.attr_emit(buf),
+            Attr::As4Path(v) => v.attr_emit(buf),
+            Attr::NextHop(v) => v.attr_emit(buf),
+            Attr::Med(v) => v.attr_emit(buf),
+            Attr::LocalPref(v) => v.attr_emit(buf),
+            Attr::AtomicAggregate(v) => v.attr_emit(buf),
+            Attr::Aggregator(v) => v.attr_emit(buf),
+            Attr::Aggregator2(v) => v.attr_emit(buf),
+            Attr::OriginatorId(v) => v.attr_emit(buf),
+            Attr::ClusterList(v) => v.attr_emit(buf),
+            // Attr::MpReachNlri(v) => v.attr_emit(buf),
+            Attr::Community(v) => v.attr_emit(buf),
+            Attr::ExtendedCom(v) => v.attr_emit(buf),
+            Attr::PmsiTunnel(v) => v.attr_emit(buf),
+            Attr::LargeCom(v) => v.attr_emit(buf),
+            Attr::Aigp(v) => v.attr_emit(buf),
+            _ => {
+                //
+            }
+        }
+    }
 }
 
-impl ParseNlri<EvpnRoute> for EvpnRoute {
-    fn parse_nlri(input: &[u8], addpath: bool) -> IResult<&[u8], EvpnRoute> {
-        let (input, id) = if addpath { be_u32(input)? } else { (input, 0) };
-        let (input, typ) = be_u8(input)?;
-        let route_type: EvpnRouteType = typ.into();
-        let (input, _length) = be_u8(input)?;
+impl fmt::Display for Attr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Attr::Origin(v) => write!(f, "{}", v),
+            Attr::As4Path(v) => write!(f, "{}", v),
+            Attr::NextHop(v) => write!(f, "{}", v),
+            Attr::Med(v) => write!(f, "{}", v),
+            Attr::LocalPref(v) => write!(f, "{}", v),
+            Attr::AtomicAggregate(v) => write!(f, "{}", v),
+            Attr::Aggregator(v) => write!(f, "{}", v),
+            Attr::Aggregator2(v) => write!(f, "{}", v),
+            Attr::OriginatorId(v) => write!(f, "{}", v),
+            Attr::ClusterList(v) => write!(f, "{}", v),
+            Attr::MpReachNlri(v) => write!(f, "{}", v),
+            Attr::MpUnreachNlri(v) => write!(f, "{}", v),
+            Attr::Community(v) => write!(f, "{}", v),
+            Attr::ExtendedCom(v) => write!(f, "{}", v),
+            Attr::PmsiTunnel(v) => write!(f, "{}", v),
+            Attr::LargeCom(v) => write!(f, "{}", v),
+            Attr::Aigp(v) => write!(f, "{}", v),
+            _ => write!(f, "Unknown"),
+        }
+    }
+}
 
-        use EvpnRouteType::*;
-        match route_type {
-            MacIpAdvRoute => {
-                let (input, rd) = RouteDistinguisher::parse_be(input)?;
+impl fmt::Debug for Attr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Attr::Origin(v) => write!(f, "{:?}", v),
+            Attr::As4Path(v) => write!(f, "{:?}", v),
+            Attr::NextHop(v) => write!(f, "{:?}", v),
+            Attr::Med(v) => write!(f, "{:?}", v),
+            Attr::LocalPref(v) => write!(f, "{:?}", v),
+            Attr::AtomicAggregate(v) => write!(f, "{:?}", v),
+            Attr::Aggregator(v) => write!(f, "{:?}", v),
+            Attr::Aggregator2(v) => write!(f, "{:?}", v),
+            Attr::OriginatorId(v) => write!(f, "{:?}", v),
+            Attr::ClusterList(v) => write!(f, "{:?}", v),
+            Attr::MpReachNlri(v) => write!(f, "{:?}", v),
+            Attr::MpUnreachNlri(v) => write!(f, "{:?}", v),
+            Attr::Community(v) => write!(f, "{:?}", v),
+            Attr::ExtendedCom(v) => write!(f, "{:?}", v),
+            Attr::PmsiTunnel(v) => write!(f, "{:?}", v),
+            Attr::LargeCom(v) => write!(f, "{:?}", v),
+            Attr::Aigp(v) => write!(f, "{:?}", v),
+            _ => write!(f, "Unknown"),
+        }
+    }
+}
 
-                let (input, esi_type) = be_u8(input)?;
-                let (input, _esi) = take(9usize).parse(input)?;
-                let (input, ether_tag) = be_u32(input)?;
+impl Attr {
+    pub fn parse_attr<'a>(
+        input: &'a [u8],
+        as4: bool,
+        opt: &'a Option<ParseOption>,
+    ) -> Result<(&'a [u8], Attr), BgpParseError> {
+        // Parse the attribute flags and type code
+        let (input, flags_byte) = be_u8(input)?;
+        let flags = AttributeFlags::from_bits(flags_byte).unwrap();
+        let (input, attr_type_byte) = be_u8(input)?;
+        let attr_type: AttrType = attr_type_byte.into();
 
-                let (input, mac_len) = be_u8(input)?;
-                let mac_size = nlri_psize(mac_len);
-                if mac_size != 6 {
-                    return Err(nom::Err::Error(make_error(input, ErrorKind::LengthValue)));
+        // Decide extended length presence and parse length
+        let (input, length_bytes) = if flags.is_extended() {
+            take(2usize).parse(input)?
+        } else {
+            take(1usize).parse(input)?
+        };
+        let attr_len = u16::from_be_bytes(if length_bytes.len() == 2 {
+            [length_bytes[0], length_bytes[1]]
+        } else {
+            [0, length_bytes[0]]
+        });
+
+        // Only AS_PATH or AGGREGATOR care about as4 extension
+        let as4_opt = matches!(attr_type, AttrType::AsPath | AttrType::Aggregator).then_some(as4);
+
+        // Split out the payload for this attribute
+        if input.len() < attr_len as usize {
+            return Err(BgpParseError::IncompleteData {
+                needed: attr_len as usize - input.len(),
+            });
+        }
+        let (attr_payload, input) = input.split_at(attr_len as usize);
+
+        // Set parse context for MP_NLRI attributes
+        set_parse_context((*opt).clone());
+
+        // Parse the attribute using the appropriate selector with error context
+        let (_, attr) =
+            Attr::parse_be(attr_payload, AttrSelector(attr_type, as4_opt)).map_err(|e| {
+                BgpParseError::AttributeParseError {
+                    attr_type,
+                    source: Box::new(BgpParseError::from(e)),
                 }
-                let (input, mac) = take(6usize).parse(input)?;
-                let (input, ip_len) = be_u8(input)?;
-                let ip_size = nlri_psize(ip_len);
-                let (input, _) = if ip_size != 0 {
-                    take(ip_size).parse(input)?
-                } else {
-                    (input, &[] as &[u8])
-                };
-                let (input, vni) = be_u24(input)?;
+            })?;
 
-                let mut evpn = EvpnMac {
-                    id,
-                    rd,
-                    esi_type,
-                    ether_tag,
-                    mac: [0u8; 6],
-                    vni,
-                };
-                evpn.mac.copy_from_slice(mac);
+        // Clear parse context
+        set_parse_context(None);
 
-                Ok((input, EvpnRoute::Mac(evpn)))
+        Ok((input, attr))
+    }
+}
+
+pub fn parse_bgp_update_attribute(
+    input: &[u8],
+    length: u16,
+    as4: bool,
+    opt: Option<ParseOption>,
+) -> Result<
+    (
+        &[u8],
+        Vec<Attr>,
+        BgpAttr,
+        Option<MpNlriReachAttr>,
+        Option<MpNlriUnreachAttr>,
+    ),
+    BgpParseError,
+> {
+    let (attr, input) = input.split_at(length as usize);
+    let mut remaining = attr;
+    // let mut attrs = Vec::new();
+    let mut bgp_attr = BgpAttr::default();
+    let mut mp_update: Option<MpNlriReachAttr> = None;
+    let mut mp_withdraw: Option<MpNlriUnreachAttr> = None;
+
+    while !remaining.is_empty() {
+        let (new_remaining, attr) = Attr::parse_attr(remaining, as4, &opt)?;
+        match attr {
+            Attr::Origin(v) => {
+                bgp_attr.origin = Some(v);
             }
-            IncMulticast => {
-                let (input, rd) = RouteDistinguisher::parse_be(input)?;
-                let (input, ether_tag) = be_u32(input)?;
-
-                let (input, updates) = many0(Ipv6Net::parse_be).parse(input)?;
-                let evpn = EvpnMulticast {
-                    rd,
-                    ether_tag,
-                    updates,
-                };
-
-                Ok((input, EvpnRoute::Multicast(evpn)))
+            Attr::As2Path(_v) => {
+                // TODO.
             }
-            _ => Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf))),
+            Attr::As4Path(v) => {
+                bgp_attr.aspath = Some(v);
+            }
+            Attr::NextHop(v) => {
+                bgp_attr.nexthop = Some(BgpNexthop::Ipv4(v.nexthop));
+            }
+            Attr::Med(v) => {
+                bgp_attr.med = Some(v);
+            }
+            Attr::LocalPref(v) => {
+                bgp_attr.local_pref = Some(v);
+            }
+            Attr::AtomicAggregate(v) => {
+                bgp_attr.atomic_aggregate = Some(v);
+            }
+            Attr::Aggregator(v) => {
+                bgp_attr.aggregator = Some(v);
+            }
+            Attr::Aggregator2(_v) => {
+                // TODO
+            }
+            Attr::Community(v) => {
+                bgp_attr.com = Some(v);
+            }
+            Attr::OriginatorId(v) => {
+                bgp_attr.originator_id = Some(v);
+            }
+            Attr::ClusterList(v) => {
+                bgp_attr.cluster_list = Some(v);
+            }
+            Attr::MpReachNlri(v) => {
+                if let MpNlriReachAttr::Vpnv4 {
+                    snpa: _,
+                    nhop,
+                    updates: _,
+                } = &v
+                {
+                    bgp_attr.nexthop = Some(BgpNexthop::Vpnv4(nhop.clone()));
+                }
+                mp_update = Some(v);
+            }
+            Attr::MpUnreachNlri(v) => {
+                mp_withdraw = Some(v);
+            }
+            Attr::ExtendedCom(v) => {
+                bgp_attr.ecom = Some(v);
+            }
+            Attr::PmsiTunnel(v) => {
+                bgp_attr.pmsi_tunnel = Some(v);
+            }
+            Attr::Aigp(v) => {
+                bgp_attr.aigp = Some(v.aigp);
+            }
+            Attr::LargeCom(v) => {
+                bgp_attr.lcom = Some(v);
+            }
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct EvpnMac {
-    pub id: u32,
-    pub rd: RouteDistinguisher,
-    pub esi_type: u8,
-    pub ether_tag: u32,
-    pub mac: [u8; 6],
-    pub vni: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct EvpnMulticast {
-    pub rd: RouteDistinguisher,
-    pub ether_tag: u32,
-    pub updates: Vec<Ipv6Net>,
-}
-
-impl Evpn {
-    pub fn rd(&self) -> &RouteDistinguisher {
-        &self.rd
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Vpnv4Nexthop {
-    pub rd: RouteDistinguisher,
-    pub nhop: Ipv4Addr,
-}
-
-impl fmt::Display for Vpnv4Nexthop {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}]:{}", self.rd, self.nhop)
-    }
-}
-
-pub struct Vpnv4Reach {
-    pub snpa: u8,
-    pub nhop: Vpnv4Nexthop,
-    pub updates: Vec<Vpnv4Nlri>,
-}
-
-impl AttrEmitter for Vpnv4Reach {
-    fn attr_type(&self) -> AttrType {
-        AttrType::MpReachNlri
+        remaining = new_remaining;
     }
 
-    fn attr_flags(&self) -> AttrFlags {
-        AttrFlags::new().with_optional(true)
-    }
-
-    fn len(&self) -> Option<usize> {
-        None
-    }
-
-    fn emit(&self, buf: &mut BytesMut) {
-        // AFI/SAFI.
-        buf.put_u16(u16::from(Afi::Ip));
-        buf.put_u8(u8::from(Safi::MplsVpn));
-        // Nexthop
-        buf.put_u8(12); // Nexthop length.  RD(8)+IPv4 Nexthop(4);
-        // Nexthop RD.
-        let rd = [0u8; 8];
-        buf.put(&rd[..]);
-        // Nexthop.
-        buf.put(&self.nhop.nhop.octets()[..]);
-        // SNPA
-        buf.put_u8(0);
-        // Prefix.
-        for update in self.updates.iter() {
-            // AddPath
-            if update.nlri.id != 0 {
-                buf.put_u32(update.nlri.id);
-            }
-            // Plen
-            let plen = update.nlri.prefix.prefix_len() + 88;
-            buf.put_u8(plen);
-            // Label
-            buf.put(&update.label.to_bytes()[..]);
-            // RD
-            buf.put_u16(update.rd.typ.clone() as u16);
-            buf.put(&update.rd.val[..]);
-            // Prefix
-            let plen = nlri_psize(update.nlri.prefix.prefix_len());
-            buf.put(&update.nlri.prefix.addr().octets()[0..plen]);
-        }
-    }
-}
-
-pub struct Vpnv4Unreach {
-    pub withdraw: Vec<Vpnv4Nlri>,
-}
-
-impl AttrEmitter for Vpnv4Unreach {
-    fn attr_type(&self) -> AttrType {
-        AttrType::MpUnreachNlri
-    }
-
-    fn attr_flags(&self) -> AttrFlags {
-        AttrFlags::new().with_optional(true)
-    }
-
-    fn len(&self) -> Option<usize> {
-        None
-    }
-
-    fn emit(&self, buf: &mut BytesMut) {
-        // AFI/SAFI.
-        buf.put_u16(u16::from(Afi::Ip));
-        buf.put_u8(u8::from(Safi::MplsVpn));
-        // Prefix.
-        for withdraw in self.withdraw.iter() {
-            // AddPath
-            if withdraw.nlri.id != 0 {
-                buf.put_u32(withdraw.nlri.id);
-            }
-            // Plen
-            let plen = withdraw.nlri.prefix.prefix_len() + 88;
-            buf.put_u8(plen);
-            // Label
-            buf.put(&withdraw.label.to_bytes()[..]);
-            // RD
-            buf.put_u16(withdraw.rd.typ.clone() as u16);
-            buf.put(&withdraw.rd.val[..]);
-            // Prefix
-            let plen = nlri_psize(withdraw.nlri.prefix.prefix_len());
-            buf.put(&withdraw.nlri.prefix.addr().octets()[0..plen]);
-        }
-    }
+    Ok((input, Vec::new(), bgp_attr, mp_update, mp_withdraw))
 }

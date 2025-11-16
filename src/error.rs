@@ -1,5 +1,6 @@
-use crate::parser::AttrType;
 use thiserror::Error;
+
+use crate::AttrType;
 
 #[derive(Error, Debug)]
 pub enum BgpParseError {
