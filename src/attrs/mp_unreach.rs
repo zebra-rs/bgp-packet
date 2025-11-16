@@ -5,8 +5,7 @@ use nom::error::{ErrorKind, make_error};
 use nom_derive::*;
 
 use crate::{
-    Afi, EvpnRoute, Ipv6Nlri, ParseBe, ParseNlri, ParseOption, Rtcv4, Safi, Vpnv4Nlri,
-    get_parse_context, many0,
+    Afi, EvpnRoute, Ipv6Nlri, ParseBe, ParseNlri, ParseOption, Rtcv4, Safi, Vpnv4Nlri, many0,
 };
 
 use super::{AttrEmitter, Vpnv4Unreach};
@@ -63,8 +62,8 @@ impl MpNlriUnreachAttr {
             )));
         }
         let (input, header) = MpNlriUnreachHeader::parse_be(input)?;
-        let add_path = if let Some(o) = opt {
-            o.is_add_path_recv(header.afi, header.safi)
+        let add_path = if let Some(opt) = opt {
+            opt.is_add_path_recv(header.afi, header.safi)
         } else {
             false
         };
@@ -110,8 +109,7 @@ impl MpNlriUnreachAttr {
 
 impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
-        let opt = get_parse_context();
-        Self::parse_nlri_opt(input, opt)
+        Self::parse_nlri_opt(input, None)
     }
 }
 
@@ -120,33 +118,33 @@ impl fmt::Display for MpNlriUnreachAttr {
         use MpNlriUnreachAttr::*;
         match self {
             Ipv4Eor => {
-                write!(f, "EoR: {}/{}", Afi::Ip, Safi::Unicast)
+                writeln!(f, " EoR: {}/{}", Afi::Ip, Safi::Unicast)
             }
             Ipv6Nlri(ipv6_nlris) => {
                 for ipv6 in ipv6_nlris.iter() {
-                    writeln!(f, "{}:{}", ipv6.id, ipv6.prefix)?;
+                    writeln!(f, " {}:{}", ipv6.id, ipv6.prefix)?;
                 }
                 Ok(())
             }
             Ipv6Eor => {
-                write!(f, "EoR: {}/{}", Afi::Ip6, Safi::Unicast)
+                writeln!(f, " EoR: {}/{}", Afi::Ip6, Safi::Unicast)
             }
             Vpnv4(vpnv4_nlris) => {
                 for vpnv4 in vpnv4_nlris.iter() {
-                    writeln!(f, "{}:{}:{}", vpnv4.nlri.id, vpnv4.rd, vpnv4.nlri.prefix)?;
+                    writeln!(f, " {}:{}:{}", vpnv4.nlri.id, vpnv4.rd, vpnv4.nlri.prefix)?;
                 }
                 Ok(())
             }
             Vpnv4Eor => {
-                write!(f, "EoR: {}/{}", Afi::Ip, Safi::MplsVpn)
+                writeln!(f, " EoR: {}/{}", Afi::Ip, Safi::MplsVpn)
             }
             Evpn(evpn_routes) => {
                 for evpn in evpn_routes.iter() {
                     match evpn {
                         EvpnRoute::Mac(v) => {
-                            write!(
+                            writeln!(
                                 f,
-                                "RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
+                                " RD: {}, VNI: {}, MAC: {:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
                                 v.rd,
                                 v.vni,
                                 v.mac[0],
@@ -158,9 +156,9 @@ impl fmt::Display for MpNlriUnreachAttr {
                             )?;
                         }
                         EvpnRoute::Multicast(v) => {
-                            write!(f, "RD: {}", v.rd)?;
+                            writeln!(f, " RD: {}", v.rd)?;
                             for update in v.updates.iter() {
-                                write!(f, " {}", update)?;
+                                writeln!(f, " {}", update)?;
                             }
                         }
                     }
@@ -168,16 +166,16 @@ impl fmt::Display for MpNlriUnreachAttr {
                 Ok(())
             }
             EvpnEor => {
-                write!(f, "EoR: {}/{}", Afi::L2vpn, Safi::Evpn)
+                writeln!(f, " EoR: {}/{}", Afi::L2vpn, Safi::Evpn)
             }
             Rtcv4(rtcv4s) => {
                 for rtcv4 in rtcv4s {
-                    write!(f, "ASN:{} {}", rtcv4.asn, rtcv4.rt)?;
+                    writeln!(f, " ASN:{} {}", rtcv4.asn, rtcv4.rt)?;
                 }
                 Ok(())
             }
             Rtcv4Eor => {
-                write!(f, "EoR: {}/{}", Afi::Ip, Safi::Rtc)
+                writeln!(f, " EoR: {}/{}", Afi::Ip, Safi::Rtc)
             }
         }
     }

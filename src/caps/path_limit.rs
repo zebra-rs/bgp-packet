@@ -3,11 +3,11 @@ use std::fmt;
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{CapabilityCode, Emit};
+use super::{CapCode, CapEmit};
 use crate::{Afi, Safi};
 
-#[derive(Debug, PartialEq, NomBE, Clone)]
-pub struct CapabilityPathLimit {
+#[derive(Debug, Default, PartialEq, NomBE, Clone)]
+pub struct CapPathLimit {
     pub values: Vec<PathLimitValue>,
 }
 
@@ -18,7 +18,7 @@ pub struct PathLimitValue {
     pub path_limit: u16,
 }
 
-impl CapabilityPathLimit {
+impl CapPathLimit {
     pub fn new(afi: Afi, safi: Safi, path_limit: u16) -> Self {
         Self {
             values: vec![PathLimitValue {
@@ -30,9 +30,9 @@ impl CapabilityPathLimit {
     }
 }
 
-impl Emit for CapabilityPathLimit {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::PathLimit
+impl CapEmit for CapPathLimit {
+    fn code(&self) -> CapCode {
+        CapCode::PathLimit
     }
 
     fn len(&self) -> u8 {
@@ -48,7 +48,7 @@ impl Emit for CapabilityPathLimit {
     }
 }
 
-impl fmt::Display for CapabilityPathLimit {
+impl fmt::Display for CapPathLimit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let _ = write!(f, "Path Limit: ");
         for (i, value) in self.values.iter().enumerate() {

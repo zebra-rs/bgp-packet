@@ -48,7 +48,7 @@ impl From<BgpHeader> for BytesMut {
 
 #[derive(Debug)]
 pub enum BgpPacket {
-    Open(OpenPacket),
+    Open(Box<OpenPacket>),
     Keepalive(BgpHeader),
     Notification(NotificationPacket),
     Update(Box<UpdatePacket>),

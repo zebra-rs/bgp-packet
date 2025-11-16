@@ -3,26 +3,26 @@ use std::fmt;
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{CapabilityCode, CapabilityHeader, Emit};
+use super::{CapCode, CapEmit, CapabilityHeader};
 
 #[derive(Debug, PartialEq, NomBE, Clone)]
-pub struct CapabilityUnknown {
+pub struct CapUnknown {
     pub header: CapabilityHeader,
     pub data: Vec<u8>,
 }
 
-impl Default for CapabilityUnknown {
+impl Default for CapUnknown {
     fn default() -> Self {
         Self {
-            header: CapabilityHeader::new(CapabilityCode::AddPath, 0),
+            header: CapabilityHeader::new(CapCode::AddPath, 0),
             data: Vec::new(),
         }
     }
 }
 
-impl Emit for CapabilityUnknown {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::Unknown(100)
+impl CapEmit for CapUnknown {
+    fn code(&self) -> CapCode {
+        CapCode::Unknown(100)
     }
 
     fn len(&self) -> u8 {
@@ -34,7 +34,7 @@ impl Emit for CapabilityUnknown {
     }
 }
 
-impl fmt::Display for CapabilityUnknown {
+impl fmt::Display for CapUnknown {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Unknown: Code {}", self.header.code)
     }

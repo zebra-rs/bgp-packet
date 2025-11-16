@@ -31,6 +31,9 @@ pub use bgp_attr::*;
 pub mod bgp_nexthop;
 pub use bgp_nexthop::*;
 
+pub mod bgp_cap;
+pub use bgp_cap::*;
+
 pub mod many;
 pub use many::many0;
 

@@ -103,7 +103,6 @@ impl BgpAttr {
 
 impl fmt::Display for BgpAttr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "BGP Attr:")?;
         if let Some(v) = &self.origin {
             writeln!(f, " Origin: {}", v)?;
         }

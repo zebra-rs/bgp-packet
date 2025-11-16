@@ -1,5 +1,5 @@
 pub mod typ;
-pub use typ::CapabilityCode;
+pub use typ::CapCode;
 
 pub mod packet;
 pub use packet::{CapabilityHeader, CapabilityPacket};
@@ -8,39 +8,37 @@ pub mod mp;
 pub use mp::CapMultiProtocol;
 
 pub mod refresh;
-pub use refresh::{
-    CapabilityEnhancedRouteRefresh, CapabilityRouteRefresh, CapabilityRouteRefreshCisco,
-};
+pub use refresh::{CapEnhancedRefresh, CapRefresh, CapRefreshCisco};
 
 pub mod extend;
-pub use extend::CapabilityExtendedMessage;
+pub use extend::CapExtended;
 
 pub mod graceful;
-pub use graceful::CapabilityGracefulRestart;
+pub use graceful::{CapRestart, RestartValue};
 
 pub mod as4;
-pub use as4::CapabilityAs4;
+pub use as4::CapAs4;
 
 pub mod dynamic;
-pub use dynamic::CapabilityDynamicCapability;
+pub use dynamic::CapDynamic;
 
 pub mod addpath;
-pub use addpath::{AddPathValue, CapabilityAddPath};
+pub use addpath::{AddPathValue, CapAddPath};
 
 pub mod llgr;
-pub use llgr::CapabilityLlgr;
+pub use llgr::{CapLlgr, LLGRValue};
 
 pub mod fqdn;
-pub use fqdn::CapabilityFqdn;
+pub use fqdn::CapFqdn;
 
 pub mod version;
-pub use version::CapabilitySoftwareVersion;
+pub use version::CapVersion;
 
 pub mod path_limit;
-pub use path_limit::CapabilityPathLimit;
+pub use path_limit::{CapPathLimit, PathLimitValue};
 
 pub mod unknown;
-pub use unknown::CapabilityUnknown;
+pub use unknown::CapUnknown;
 
 pub mod emit;
-pub use emit::Emit;
+pub use emit::CapEmit;

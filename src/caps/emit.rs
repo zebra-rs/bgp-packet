@@ -1,11 +1,11 @@
 use bytes::{BufMut, BytesMut};
 
-use super::CapabilityCode;
+use super::CapCode;
 
 const CAPABILITY_CODE: u8 = 2;
 
-pub trait Emit {
-    fn code(&self) -> CapabilityCode;
+pub trait CapEmit {
+    fn code(&self) -> CapCode;
 
     fn len(&self) -> u8 {
         0
