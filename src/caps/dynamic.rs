@@ -2,18 +2,18 @@ use std::fmt;
 
 use nom_derive::*;
 
-use super::{CapabilityCode, Emit};
+use super::{CapCode, Emit};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
-pub struct CapabilityDynamicCapability {}
+pub struct CapDynamic {}
 
-impl Emit for CapabilityDynamicCapability {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::DynamicCapability
+impl Emit for CapDynamic {
+    fn code(&self) -> CapCode {
+        CapCode::DynamicCapability
     }
 }
 
-impl fmt::Display for CapabilityDynamicCapability {
+impl fmt::Display for CapDynamic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Dynamic Capability")
     }

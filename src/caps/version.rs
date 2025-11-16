@@ -3,14 +3,14 @@ use std::fmt;
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{CapabilityCode, Emit};
+use super::{CapCode, Emit};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
-pub struct CapabilitySoftwareVersion {
+pub struct CapVersion {
     pub version: Vec<u8>,
 }
 
-impl CapabilitySoftwareVersion {
+impl CapVersion {
     pub fn new(version: &str) -> Self {
         Self {
             version: version.into(),
@@ -18,9 +18,9 @@ impl CapabilitySoftwareVersion {
     }
 }
 
-impl Emit for CapabilitySoftwareVersion {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::SoftwareVersion
+impl Emit for CapVersion {
+    fn code(&self) -> CapCode {
+        CapCode::SoftwareVersion
     }
 
     fn len(&self) -> u8 {
@@ -32,7 +32,7 @@ impl Emit for CapabilitySoftwareVersion {
     }
 }
 
-impl fmt::Display for CapabilitySoftwareVersion {
+impl fmt::Display for CapVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

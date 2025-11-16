@@ -6,11 +6,17 @@ use nom::IResult;
 use nom::number::complete::{be_u8, be_u24};
 use nom_derive::*;
 
-use crate::{Afi, CapabilityCode, Emit, ParseBe, Safi, u32_u24};
+use crate::{Afi, CapCode, Emit, ParseBe, Safi, u32_u24};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
-pub struct CapabilityLlgr {
+pub struct CapLlgr {
     pub values: Vec<LLGRValue>,
+}
+
+impl CapLlgr {
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
 }
 
 #[bitfield(u8, debug = true)]
@@ -49,9 +55,9 @@ impl LLGRValue {
     }
 }
 
-impl Emit for CapabilityLlgr {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::LlgrOld
+impl Emit for CapLlgr {
+    fn code(&self) -> CapCode {
+        CapCode::LlgrOld
     }
 
     fn len(&self) -> u8 {
@@ -68,7 +74,7 @@ impl Emit for CapabilityLlgr {
     }
 }
 
-impl fmt::Display for CapabilityLlgr {
+impl fmt::Display for CapLlgr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let _ = write!(f, "LLGR: ");
         for (i, value) in self.values.iter().enumerate() {

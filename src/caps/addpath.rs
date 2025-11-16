@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 use nom::{IResult, number::complete::be_u8};
 use nom_derive::*;
 
-use super::{CapabilityCode, Emit};
+use super::{CapCode, Emit};
 use crate::{Afi, Safi};
 
 #[derive(Debug, PartialEq, NomBE, Clone, Ord, PartialOrd, Eq)]
@@ -89,11 +89,11 @@ impl FromStr for AddPathSendReceive {
 }
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
-pub struct CapabilityAddPath {
+pub struct CapAddPath {
     pub values: Vec<AddPathValue>,
 }
 
-impl CapabilityAddPath {
+impl CapAddPath {
     pub fn new(afi: Afi, safi: Safi, send_receive: u8) -> Self {
         Self {
             values: vec![AddPathValue {
@@ -103,11 +103,15 @@ impl CapabilityAddPath {
             }],
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
 }
 
-impl Emit for CapabilityAddPath {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::AddPath
+impl Emit for CapAddPath {
+    fn code(&self) -> CapCode {
+        CapCode::AddPath
     }
 
     fn len(&self) -> u8 {
@@ -123,7 +127,7 @@ impl Emit for CapabilityAddPath {
     }
 }
 
-impl fmt::Display for CapabilityAddPath {
+impl fmt::Display for CapAddPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let _ = write!(f, "AddPath: ");
         for (i, value) in self.values.iter().enumerate() {

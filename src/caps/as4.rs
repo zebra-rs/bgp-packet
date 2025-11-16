@@ -3,22 +3,22 @@ use std::fmt;
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 
-use super::{CapabilityCode, Emit};
+use super::{CapCode, Emit};
 
 #[derive(Debug, PartialEq, NomBE, Clone)]
-pub struct CapabilityAs4 {
+pub struct CapAs4 {
     pub asn: u32,
 }
 
-impl CapabilityAs4 {
+impl CapAs4 {
     pub fn new(asn: u32) -> Self {
         Self { asn }
     }
 }
 
-impl Emit for CapabilityAs4 {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::As4
+impl Emit for CapAs4 {
+    fn code(&self) -> CapCode {
+        CapCode::As4
     }
 
     fn len(&self) -> u8 {
@@ -30,7 +30,7 @@ impl Emit for CapabilityAs4 {
     }
 }
 
-impl fmt::Display for CapabilityAs4 {
+impl fmt::Display for CapAs4 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "4 Octet AS: {}", self.asn)
     }

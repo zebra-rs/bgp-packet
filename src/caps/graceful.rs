@@ -5,7 +5,7 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{Afi, CapabilityCode, Emit, Safi};
+use crate::{Afi, CapCode, Emit, Safi};
 
 #[bitfield(u16, debug = true)]
 #[derive(Serialize, Deserialize, PartialEq, NomBE)]
@@ -27,14 +27,14 @@ pub struct RestartFlags {
 }
 
 #[derive(Debug, PartialEq, Clone, NomBE)]
-pub struct GracefulRestartValue {
+pub struct RestartValue {
     pub flag_time: RestartFlagTime,
     pub afi: Afi,
     pub safi: Safi,
     pub flags: RestartFlags,
 }
 
-impl GracefulRestartValue {
+impl RestartValue {
     pub fn new(restart_time: u16, afi: Afi, safi: Safi) -> Self {
         Self {
             flag_time: RestartFlagTime::new().with_restart_time(restart_time),
@@ -46,13 +46,13 @@ impl GracefulRestartValue {
 }
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
-pub struct CapabilityGracefulRestart {
-    pub values: Vec<GracefulRestartValue>,
+pub struct CapRestart {
+    pub values: Vec<RestartValue>,
 }
 
-impl Emit for CapabilityGracefulRestart {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::GracefulRestart
+impl Emit for CapRestart {
+    fn code(&self) -> CapCode {
+        CapCode::GracefulRestart
     }
 
     fn len(&self) -> u8 {
@@ -69,7 +69,7 @@ impl Emit for CapabilityGracefulRestart {
     }
 }
 
-impl fmt::Display for CapabilityGracefulRestart {
+impl fmt::Display for CapRestart {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let _ = write!(f, "GracefulRestart: ");
         for (i, value) in self.values.iter().enumerate() {

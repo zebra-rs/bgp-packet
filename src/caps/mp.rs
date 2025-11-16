@@ -4,7 +4,7 @@ use bytes::{BufMut, BytesMut};
 use nom_derive::*;
 use serde::Serialize;
 
-use super::{CapabilityCode, Emit};
+use super::{CapCode, Emit};
 use crate::{Afi, Safi};
 
 #[derive(Debug, PartialEq, NomBE, Clone, Eq, Hash, Serialize)]
@@ -25,8 +25,8 @@ impl CapMultiProtocol {
 }
 
 impl Emit for CapMultiProtocol {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::MultiProtocol
+    fn code(&self) -> CapCode {
+        CapCode::MultiProtocol
     }
 
     fn len(&self) -> u8 {

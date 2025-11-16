@@ -13,7 +13,7 @@ pub struct CapabilityHeader {
 }
 
 impl CapabilityHeader {
-    pub fn new(code: CapabilityCode, length: u8) -> Self {
+    pub fn new(code: CapCode, length: u8) -> Self {
         Self {
             code: code.into(),
             length,
@@ -22,38 +22,38 @@ impl CapabilityHeader {
 }
 
 #[derive(Debug, PartialEq, Clone, NomBE)]
-#[nom(Selector = "CapabilityCode")]
+#[nom(Selector = "CapCode")]
 pub enum CapabilityPacket {
-    #[nom(Selector = "CapabilityCode::MultiProtocol")]
+    #[nom(Selector = "CapCode::MultiProtocol")]
     MultiProtocol(CapMultiProtocol),
-    #[nom(Selector = "CapabilityCode::RouteRefresh")]
-    RouteRefresh(CapabilityRouteRefresh),
-    #[nom(Selector = "CapabilityCode::ExtendedMessage")]
-    ExtendedMessage(CapabilityExtendedMessage),
-    #[nom(Selector = "CapabilityCode::GracefulRestart")]
-    GracefulRestart(CapabilityGracefulRestart),
-    #[nom(Selector = "CapabilityCode::As4")]
-    As4(CapabilityAs4),
-    #[nom(Selector = "CapabilityCode::DynamicCapability")]
-    DynamicCapability(CapabilityDynamicCapability),
-    #[nom(Selector = "CapabilityCode::AddPath")]
-    AddPath(CapabilityAddPath),
-    #[nom(Selector = "CapabilityCode::EnhancedRouteRefresh")]
-    EnhancedRouteRefresh(CapabilityEnhancedRouteRefresh),
-    #[nom(Selector = "CapabilityCode::Llgr")]
-    Llgr(CapabilityLlgr),
-    #[nom(Selector = "CapabilityCode::Fqdn")]
-    Fqdn(CapabilityFqdn),
-    #[nom(Selector = "CapabilityCode::SoftwareVersion")]
-    SoftwareVersion(CapabilitySoftwareVersion),
-    #[nom(Selector = "CapabilityCode::PathLimit")]
-    PathLimit(CapabilityPathLimit),
-    #[nom(Selector = "CapabilityCode::RouteRefreshCisco")]
-    RouteRefreshCisco(CapabilityRouteRefreshCisco),
-    #[nom(Selector = "CapabilityCode::LlgrOld")]
-    LlgrOld(CapabilityLlgr),
+    #[nom(Selector = "CapCode::RouteRefresh")]
+    RouteRefresh(CapRefresh),
+    #[nom(Selector = "CapCode::ExtendedMessage")]
+    ExtendedMessage(CapExtended),
+    #[nom(Selector = "CapCode::GracefulRestart")]
+    GracefulRestart(CapRestart),
+    #[nom(Selector = "CapCode::As4")]
+    As4(CapAs4),
+    #[nom(Selector = "CapCode::DynamicCapability")]
+    DynamicCapability(CapDynamic),
+    #[nom(Selector = "CapCode::AddPath")]
+    AddPath(CapAddPath),
+    #[nom(Selector = "CapCode::EnhancedRouteRefresh")]
+    EnhancedRouteRefresh(CapEnhancedRefresh),
+    #[nom(Selector = "CapCode::Llgr")]
+    Llgr(CapLlgr),
+    #[nom(Selector = "CapCode::Fqdn")]
+    Fqdn(CapFqdn),
+    #[nom(Selector = "CapCode::SoftwareVersion")]
+    SoftwareVersion(CapVersion),
+    #[nom(Selector = "CapCode::PathLimit")]
+    PathLimit(CapPathLimit),
+    #[nom(Selector = "CapCode::RouteRefreshCisco")]
+    RouteRefreshCisco(CapRefreshCisco),
+    #[nom(Selector = "CapCode::LlgrOld")]
+    LlgrOld(CapLlgr),
     #[nom(Selector = "_")]
-    Unknown(CapabilityUnknown),
+    Unknown(CapUnknown),
 }
 
 impl CapabilityPacket {

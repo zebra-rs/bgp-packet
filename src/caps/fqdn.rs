@@ -6,15 +6,15 @@ use nom::bytes::complete::take;
 use nom::number::complete::be_u8;
 use nom_derive::*;
 
-use super::{CapabilityCode, Emit};
+use super::{CapCode, Emit};
 
 #[derive(Debug, Default, PartialEq, Clone)]
-pub struct CapabilityFqdn {
+pub struct CapFqdn {
     pub hostname: Vec<u8>,
     pub domain: Vec<u8>,
 }
 
-impl CapabilityFqdn {
+impl CapFqdn {
     pub fn new(hostname: &str, domain: &str) -> Self {
         Self {
             hostname: hostname.into(),
@@ -23,9 +23,9 @@ impl CapabilityFqdn {
     }
 }
 
-impl Emit for CapabilityFqdn {
-    fn code(&self) -> CapabilityCode {
-        CapabilityCode::Fqdn
+impl Emit for CapFqdn {
+    fn code(&self) -> CapCode {
+        CapCode::Fqdn
     }
 
     fn len(&self) -> u8 {
@@ -40,7 +40,7 @@ impl Emit for CapabilityFqdn {
     }
 }
 
-impl CapabilityFqdn {
+impl CapFqdn {
     pub fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
         let (input, hostname_len) = be_u8(input)?;
         let (input, hostname) = take(hostname_len).parse(input)?;
@@ -54,7 +54,7 @@ impl CapabilityFqdn {
     }
 }
 
-impl fmt::Display for CapabilityFqdn {
+impl fmt::Display for CapFqdn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let hostname = String::from_utf8_lossy(&self.hostname);
         let domain = String::from_utf8_lossy(&self.domain);
