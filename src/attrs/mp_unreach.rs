@@ -62,8 +62,8 @@ impl MpNlriUnreachAttr {
             )));
         }
         let (input, header) = MpNlriUnreachHeader::parse_be(input)?;
-        let add_path = if let Some(o) = opt {
-            o.is_add_path_recv(header.afi, header.safi)
+        let add_path = if let Some(opt) = opt {
+            opt.is_add_path_recv(header.afi, header.safi)
         } else {
             false
         };

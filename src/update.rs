@@ -134,8 +134,8 @@ impl UpdatePacket {
         as4: bool,
         opt: Option<ParseOption>,
     ) -> Result<(&[u8], UpdatePacket), BgpParseError> {
-        let add_path = if let Some(o) = opt.as_ref() {
-            o.is_add_path_recv(Afi::Ip, Safi::Unicast)
+        let add_path = if let Some(opt) = opt.as_ref() {
+            opt.is_add_path_recv(Afi::Ip, Safi::Unicast)
         } else {
             false
         };
