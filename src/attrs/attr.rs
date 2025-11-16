@@ -339,7 +339,7 @@ pub fn parse_bgp_update_attribute(
                 bgp_attr.pmsi_tunnel = Some(v);
             }
             Attr::Aigp(v) => {
-                bgp_attr.aigp = Some(v.aigp);
+                bgp_attr.aigp = Some(v);
             }
             Attr::LargeCom(v) => {
                 bgp_attr.lcom = Some(v);
