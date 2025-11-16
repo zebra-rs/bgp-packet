@@ -202,15 +202,15 @@ impl fmt::Display for MpNlriReachAttr {
             }
             Evpn {
                 snpa: _,
-                nhop,
+                nhop: _,
                 updates,
             } => {
                 for update in updates.iter() {
                     match update {
                         EvpnRoute::Mac(v) => {
-                            write!(
+                            writeln!(
                                 f,
-                                " [{}] VNI:{}, MAC:{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x} => {}",
+                                " [{}] VNI:{}, MAC:{:02x}{:02x}:{:02x}{:02x}:{:02x}{:02x}",
                                 v.rd,
                                 v.vni,
                                 v.mac[0],
@@ -219,14 +219,10 @@ impl fmt::Display for MpNlriReachAttr {
                                 v.mac[3],
                                 v.mac[4],
                                 v.mac[5],
-                                nhop,
                             )?;
                         }
                         EvpnRoute::Multicast(v) => {
-                            write!(f, "RD: {}", v.rd)?;
-                            for update in v.updates.iter() {
-                                write!(f, " {} => {}", update, nhop)?;
-                            }
+                            writeln!(f, " [{}]{}", v.rd, v.addr)?;
                         }
                     }
                 }

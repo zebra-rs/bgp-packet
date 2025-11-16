@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::net::{IpAddr, Ipv4Addr};
 
 use crate::Vpnv4Nexthop;
 
@@ -6,4 +6,5 @@ use crate::Vpnv4Nexthop;
 pub enum BgpNexthop {
     Ipv4(Ipv4Addr),
     Vpnv4(Vpnv4Nexthop),
+    Evpn(IpAddr),
 }

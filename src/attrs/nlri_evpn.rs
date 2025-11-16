@@ -1,4 +1,4 @@
-use ipnet::Ipv6Net;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use nom::IResult;
 use nom::bytes::complete::take;
@@ -6,7 +6,7 @@ use nom::error::{ErrorKind, make_error};
 use nom::number::complete::{be_u8, be_u24, be_u32};
 use nom_derive::*;
 
-use crate::{ParseBe, ParseNlri, RouteDistinguisher, many0, nlri_psize};
+use crate::{ParseNlri, RouteDistinguisher, nlri_psize};
 
 #[derive(Debug, Clone)]
 pub enum EvpnRouteType {
@@ -56,6 +56,29 @@ pub enum EvpnRoute {
     Multicast(EvpnMulticast),
 }
 
+#[derive(Debug, Clone)]
+pub struct EvpnMac {
+    pub id: u32,
+    pub rd: RouteDistinguisher,
+    pub esi_type: u8,
+    pub ether_tag: u32,
+    pub mac: [u8; 6],
+    pub vni: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct EvpnMulticast {
+    pub rd: RouteDistinguisher,
+    pub ether_tag: u32,
+    pub addr: IpAddr,
+}
+
+impl Evpn {
+    pub fn rd(&self) -> &RouteDistinguisher {
+        &self.rd
+    }
+}
+
 impl ParseNlri<EvpnRoute> for EvpnRoute {
     fn parse_nlri(input: &[u8], addpath: bool) -> IResult<&[u8], EvpnRoute> {
         let (input, id) = if addpath { be_u32(input)? } else { (input, 0) };
@@ -102,40 +125,28 @@ impl ParseNlri<EvpnRoute> for EvpnRoute {
             IncMulticast => {
                 let (input, rd) = RouteDistinguisher::parse_be(input)?;
                 let (input, ether_tag) = be_u32(input)?;
-
-                let (input, updates) = many0(Ipv6Net::parse_be).parse(input)?;
+                let (input, addr_len) = be_u8(input)?;
+                let (input, addr) = if addr_len == 32 {
+                    let (input, val) = be_u32(input)?;
+                    let nhop = IpAddr::V4(Ipv4Addr::from(val));
+                    (input, nhop)
+                } else {
+                    let (input, val) = take(16usize).parse(input)?;
+                    let mut octets = [0u8; 16];
+                    octets.copy_from_slice(val);
+                    let addr = Ipv6Addr::from(octets);
+                    let nhop = IpAddr::V6(addr);
+                    (input, nhop)
+                };
                 let evpn = EvpnMulticast {
                     rd,
                     ether_tag,
-                    updates,
+                    addr,
                 };
 
                 Ok((input, EvpnRoute::Multicast(evpn)))
             }
             _ => Err(nom::Err::Error(make_error(input, ErrorKind::NoneOf))),
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct EvpnMac {
-    pub id: u32,
-    pub rd: RouteDistinguisher,
-    pub esi_type: u8,
-    pub ether_tag: u32,
-    pub mac: [u8; 6],
-    pub vni: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct EvpnMulticast {
-    pub rd: RouteDistinguisher,
-    pub ether_tag: u32,
-    pub updates: Vec<Ipv6Net>,
-}
-
-impl Evpn {
-    pub fn rd(&self) -> &RouteDistinguisher {
-        &self.rd
     }
 }

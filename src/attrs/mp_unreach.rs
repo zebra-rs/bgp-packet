@@ -156,10 +156,7 @@ impl fmt::Display for MpNlriUnreachAttr {
                             )?;
                         }
                         EvpnRoute::Multicast(v) => {
-                            writeln!(f, " RD: {}", v.rd)?;
-                            for update in v.updates.iter() {
-                                writeln!(f, " {}", update)?;
-                            }
+                            writeln!(f, " [{}]{}", v.rd, v.addr)?;
                         }
                     }
                 }

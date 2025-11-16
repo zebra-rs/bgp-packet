@@ -342,6 +342,14 @@ pub fn parse_bgp_update_attribute(
                 {
                     bgp_attr.nexthop = Some(BgpNexthop::Vpnv4(nhop.clone()));
                 }
+                if let MpNlriReachAttr::Evpn {
+                    snpa: _,
+                    nhop,
+                    updates: _,
+                } = &v
+                {
+                    bgp_attr.nexthop = Some(BgpNexthop::Evpn(nhop.clone()));
+                }
                 mp_update = Some(v);
             }
             Attr::MpUnreachNlri(v) => {
