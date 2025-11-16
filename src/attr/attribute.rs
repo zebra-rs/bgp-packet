@@ -1,10 +1,13 @@
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
+use crate::attr::emitter::AttrEmitter;
+use crate::encode::{Vpnv4Reach, Vpnv4Unreach};
 use crate::{
     Afi, ExtCommunityValue, Ipv4Nlri, Ipv6Nlri, ParseBe, ParseNlri, ParseOption,
     RouteDistinguisher, Safi, Vpnv4Nlri, get_parse_context, many0, nlri_psize,
 };
+use bytes::BytesMut;
 use ipnet::Ipv6Net;
 use nom::{
     IResult,
@@ -48,17 +51,6 @@ impl ParseNlri<Rtcv4> for Rtcv4 {
     }
 }
 
-// #[derive(Clone, Default)]
-// pub struct MpNlriReachAttr {
-//     pub snpa: u8,
-//     pub nexthop: Option<IpAddr>,
-//     pub ipv6_prefix: Vec<Ipv6Nlri>,
-//     pub vpnv4_prefix: Vec<Vpnv4Nlri>,
-//     pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
-//     pub evpn_prefix: Vec<EvpnRoute>,
-//     pub rtcv4_prefix: Vec<Rtcv4>,
-// }
-
 #[derive(Clone)]
 pub enum MpNlriReachAttr {
     Ipv4 {
@@ -91,6 +83,28 @@ pub enum MpNlriReachAttr {
     },
 }
 
+impl MpNlriReachAttr {
+    pub fn attr_emit(&self, buf: &mut BytesMut) {
+        match self {
+            MpNlriReachAttr::Vpnv4 {
+                snpa,
+                nhop,
+                updates,
+            } => {
+                let attr = Vpnv4Reach {
+                    snpa: *snpa,
+                    nhop: nhop.clone(),
+                    updates: updates.clone(),
+                };
+                attr.attr_emit(buf);
+            }
+            _ => {
+                //
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum MpNlriUnreachAttr {
     // Ipv4Nlri(Vec<>),
@@ -105,6 +119,26 @@ pub enum MpNlriUnreachAttr {
     EvpnEor,
     Rtcv4(Vec<Rtcv4>),
     Rtcv4Eor,
+}
+
+impl MpNlriUnreachAttr {
+    pub fn attr_emit(&self, buf: &mut BytesMut) {
+        match self {
+            MpNlriUnreachAttr::Vpnv4(withdraw) => {
+                let attr = Vpnv4Unreach {
+                    withdraw: withdraw.clone(),
+                };
+                attr.attr_emit(buf);
+            }
+            MpNlriUnreachAttr::Vpnv4Eor => {
+                let attr = Vpnv4Unreach { withdraw: vec![] };
+                attr.attr_emit(buf);
+            }
+            _ => {
+                //
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

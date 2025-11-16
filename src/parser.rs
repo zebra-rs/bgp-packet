@@ -268,18 +268,94 @@ fn parse_bgp_update_attribute(
     length: u16,
     as4: bool,
     opt: Option<ParseOption>,
-) -> Result<(&[u8], Vec<Attr>), BgpParseError> {
+) -> Result<
+    (
+        &[u8],
+        Vec<Attr>,
+        BgpAttr,
+        Option<MpNlriReachAttr>,
+        Option<MpNlriUnreachAttr>,
+    ),
+    BgpParseError,
+> {
     let (attr, input) = input.split_at(length as usize);
     let mut remaining = attr;
-    let mut attrs = Vec::new();
+    // let mut attrs = Vec::new();
+    let mut bgp_attr = BgpAttr::default();
+    let mut mp_update: Option<MpNlriReachAttr> = None;
+    let mut mp_withdraw: Option<MpNlriUnreachAttr> = None;
 
     while !remaining.is_empty() {
         let (new_remaining, attr) = Attr::parse_attr(remaining, as4, &opt)?;
-        attrs.push(attr);
+        match attr {
+            Attr::Origin(v) => {
+                bgp_attr.origin = Some(v);
+            }
+            Attr::As2Path(_v) => {
+                // TODO.
+            }
+            Attr::As4Path(v) => {
+                bgp_attr.aspath = Some(v);
+            }
+            Attr::NextHop(v) => {
+                bgp_attr.nexthop = Some(BgpNexthop::Ipv4(v.nexthop));
+            }
+            Attr::Med(v) => {
+                bgp_attr.med = Some(v);
+            }
+            Attr::LocalPref(v) => {
+                bgp_attr.local_pref = Some(v);
+            }
+            Attr::AtomicAggregate(v) => {
+                bgp_attr.atomic_aggregate = Some(v);
+            }
+            Attr::Aggregator(v) => {
+                bgp_attr.aggregator = Some(v);
+            }
+            Attr::Aggregator2(_v) => {
+                // TODO
+            }
+            Attr::Community(v) => {
+                bgp_attr.com = Some(v);
+            }
+            Attr::OriginatorId(v) => {
+                bgp_attr.originator_id = Some(v);
+            }
+            Attr::ClusterList(v) => {
+                bgp_attr.cluster_list = Some(v);
+            }
+            Attr::MpReachNlri(v) => {
+                if let MpNlriReachAttr::Vpnv4 {
+                    snpa: _,
+                    nhop,
+                    updates: _,
+                } = &v
+                {
+                    bgp_attr.nexthop = Some(BgpNexthop::Vpnv4(nhop.clone()));
+                }
+                mp_update = Some(v);
+            }
+            Attr::MpUnreachNlri(v) => {
+                mp_withdraw = Some(v);
+            }
+            Attr::ExtendedCom(v) => {
+                bgp_attr.ecom = Some(v);
+            }
+            Attr::PmsiTunnel(v) => {
+                bgp_attr.pmsi_tunnel = Some(v);
+            }
+            Attr::Aigp(v) => {
+                bgp_attr.aigp = Some(v.aigp);
+            }
+            Attr::LargeCom(v) => {
+                bgp_attr.lcom = Some(v);
+            }
+        }
+        // attrs.push(attr);
         remaining = new_remaining;
     }
 
-    Ok((input, attrs))
+    Ok((input, Vec::new(), bgp_attr, mp_update, mp_withdraw))
 }
 
 pub fn nlri_psize(plen: u8) -> usize {
@@ -434,7 +510,6 @@ impl UpdatePacket {
         as4: bool,
         opt: Option<ParseOption>,
     ) -> Result<(&[u8], UpdatePacket), BgpParseError> {
-        // AddPath receive.
         let add_path = if let Some(o) = opt.as_ref() {
             o.is_add_path_recv(Afi::Ip, Safi::Unicast)
         } else {
@@ -445,8 +520,11 @@ impl UpdatePacket {
         let (input, mut withdrawal) = parse_bgp_nlri_ipv4(input, withdraw_len, add_path)?;
         packet.ipv4_withdraw.append(&mut withdrawal);
         let (input, attr_len) = be_u16(input)?;
-        let (input, mut attrs) = parse_bgp_update_attribute(input, attr_len, as4, opt)?;
-        packet.attrs.append(&mut attrs);
+        let (input, _, bgp_attr, mp_update, mp_withdraw) =
+            parse_bgp_update_attribute(input, attr_len, as4, opt)?;
+        packet.bgp_attr = bgp_attr;
+        packet.mp_update = mp_update;
+        packet.mp_withdraw = mp_withdraw;
         let nlri_len = packet.header.length - BGP_HEADER_LEN - 2 - withdraw_len - 2 - attr_len;
         let (input, mut updates) = parse_bgp_nlri_ipv4(input, nlri_len, add_path)?;
         packet.ipv4_update.append(&mut updates);

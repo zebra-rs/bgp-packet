@@ -1,5 +1,7 @@
 use std::fmt;
 
+use bytes::BytesMut;
+
 use crate::*;
 
 // BGP Attribute for quick access to each attribute. This would be used for
@@ -44,6 +46,55 @@ impl BgpAttr {
             aspath: Some(As4Path::default()),
             med: Some(Med::default()),
             ..Default::default()
+        }
+    }
+
+    pub fn attr_emit(&self, buf: &mut BytesMut) {
+        if let Some(v) = &self.origin {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.aspath {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.nexthop {
+            if let BgpNexthop::Ipv4(addr) = v {
+                let nexthop = NexthopAttr { nexthop: *addr };
+                nexthop.attr_emit(buf);
+            }
+        }
+        if let Some(v) = &self.med {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.local_pref {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.atomic_aggregate {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.aggregator {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.com {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.originator_id {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.cluster_list {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.ecom {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.pmsi_tunnel {
+            v.attr_emit(buf);
+        }
+        if let Some(v) = &self.aigp {
+            let aigp = Aigp { aigp: *v };
+            aigp.attr_emit(buf);
+        }
+        if let Some(v) = &self.lcom {
+            v.attr_emit(buf);
         }
     }
 

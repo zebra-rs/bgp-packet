@@ -1,5 +1,3 @@
-use std::net::Ipv4Addr;
-
 use bytes::{BufMut, BytesMut};
 
 use crate::{Afi, AttrEmitter, AttrFlags, AttrType, Safi, Vpnv4Nexthop, Vpnv4Nlri, nlri_psize};
@@ -52,9 +50,10 @@ impl From<OpenPacket> for BytesMut {
     }
 }
 
-struct Vpnv4Reach {
-    pub update: Vec<Vpnv4Nlri>,
-    pub nexthop: Option<Vpnv4Nexthop>,
+pub struct Vpnv4Reach {
+    pub snpa: u8,
+    pub nhop: Vpnv4Nexthop,
+    pub updates: Vec<Vpnv4Nlri>,
 }
 
 impl AttrEmitter for Vpnv4Reach {
@@ -75,20 +74,16 @@ impl AttrEmitter for Vpnv4Reach {
         buf.put_u16(u16::from(Afi::Ip));
         buf.put_u8(u8::from(Safi::MplsVpn));
         // Nexthop
-        buf.put_u8(12); // Nexthop len
+        buf.put_u8(12); // Nexthop length.  RD(8)+IPv4 Nexthop(4);
         // Nexthop RD.
         let rd = [0u8; 8];
         buf.put(&rd[..]);
-        let nexthop: Ipv4Addr = if let Some(v) = &self.nexthop {
-            v.nhop
-        } else {
-            Ipv4Addr::UNSPECIFIED
-        };
-        buf.put(&nexthop.octets()[..]);
+        // Nexthop.
+        buf.put(&self.nhop.nhop.octets()[..]);
         // SNPA
         buf.put_u8(0);
         // Prefix.
-        for update in self.update.iter() {
+        for update in self.updates.iter() {
             // AddPath
             if update.nlri.id != 0 {
                 buf.put_u32(update.nlri.id);
@@ -108,7 +103,7 @@ impl AttrEmitter for Vpnv4Reach {
     }
 }
 
-struct Vpnv4Unreach {
+pub struct Vpnv4Unreach {
     pub withdraw: Vec<Vpnv4Nlri>,
 }
 
@@ -171,30 +166,22 @@ impl From<UpdatePacket> for BytesMut {
         let withdraw_len: u16 = (buf.len() - withdraw_len_pos - 2) as u16;
         buf[withdraw_pos].copy_from_slice(&withdraw_len.to_be_bytes());
 
-        // Attributes.
+        // Attributes length.
         let attr_len_pos = buf.len();
         buf.put_u16(0u16); // Placeholder
         let attr_pos: std::ops::Range<usize> = attr_len_pos..attr_len_pos + 2;
 
-        for attr in update.attrs.iter() {
-            attr.emit(&mut buf);
+        // Attributes emit.
+        update.bgp_attr.attr_emit(&mut buf);
+
+        // MP reach.
+        if let Some(mp_update) = update.mp_update {
+            mp_update.attr_emit(&mut buf);
         }
-        if !update.vpnv4_update.is_empty() {
-            let vpnv4 = Vpnv4Reach {
-                update: update.vpnv4_update,
-                nexthop: update.vpnv4_nexthop,
-            };
-            vpnv4.attr_emit(&mut buf);
-        }
-        if !update.vpnv4_withdraw.is_empty() {
-            let vpnv4 = Vpnv4Unreach {
-                withdraw: update.vpnv4_withdraw,
-            };
-            vpnv4.attr_emit(&mut buf);
-        }
-        if update.vpnv4_eor {
-            let vpnv4 = Vpnv4Unreach { withdraw: vec![] };
-            vpnv4.attr_emit(&mut buf);
+
+        // MP reach.
+        if let Some(mp_withdraw) = update.mp_withdraw {
+            mp_withdraw.attr_emit(&mut buf);
         }
 
         let attr_len: u16 = (buf.len() - attr_len_pos - 2) as u16;

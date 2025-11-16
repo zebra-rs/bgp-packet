@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{Attr, Ipv4Nlri, Vpnv4Nexthop, Vpnv4Nlri};
+use crate::{BgpAttr, Ipv4Nlri, MpNlriReachAttr, MpNlriUnreachAttr};
 
 use super::{BGP_HEADER_LEN, BgpHeader, BgpType};
 use nom_derive::*;
@@ -9,21 +9,15 @@ use nom_derive::*;
 pub struct UpdatePacket {
     pub header: BgpHeader,
     #[nom(Ignore)]
-    pub attrs: Vec<Attr>,
+    pub bgp_attr: BgpAttr,
     #[nom(Ignore)]
     pub ipv4_update: Vec<Ipv4Nlri>,
     #[nom(Ignore)]
     pub ipv4_withdraw: Vec<Ipv4Nlri>,
     #[nom(Ignore)]
-    pub vpnv4_update: Vec<Vpnv4Nlri>,
+    pub mp_update: Option<MpNlriReachAttr>,
     #[nom(Ignore)]
-    pub vpnv4_nexthop: Option<Vpnv4Nexthop>,
-    #[nom(Ignore)]
-    pub vpnv4_withdraw: Vec<Vpnv4Nlri>,
-    #[nom(Ignore)]
-    pub vpnv4_eor: bool,
-    #[nom(Ignore)]
-    pub add_path: bool,
+    pub mp_withdraw: Option<MpNlriUnreachAttr>,
 }
 
 impl UpdatePacket {
@@ -36,14 +30,11 @@ impl Default for UpdatePacket {
     fn default() -> Self {
         Self {
             header: BgpHeader::new(BgpType::Update, BGP_HEADER_LEN),
-            attrs: Vec::new(),
+            bgp_attr: BgpAttr::default(),
             ipv4_update: Vec::new(),
             ipv4_withdraw: Vec::new(),
-            vpnv4_update: Vec::new(),
-            vpnv4_nexthop: None,
-            vpnv4_withdraw: Vec::new(),
-            vpnv4_eor: false,
-            add_path: false,
+            mp_update: None,
+            mp_withdraw: None,
         }
     }
 }
@@ -51,9 +42,9 @@ impl Default for UpdatePacket {
 impl fmt::Debug for UpdatePacket {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Update Message:")?;
-        for attr in self.attrs.iter() {
-            write!(f, "\n {:?}", attr)?;
-        }
+        // for attr in self.attrs.iter() {
+        //     write!(f, "\n {:?}", attr)?;
+        // }
         write!(f, "\n IPv4 Updates:")?;
         if self.ipv4_update.is_empty() {
             write!(f, " None")?;
