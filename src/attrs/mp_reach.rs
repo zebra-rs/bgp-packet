@@ -8,7 +8,7 @@ use nom_derive::*;
 
 use crate::{
     Afi, EvpnRoute, Ipv4Nlri, Ipv6Nlri, ParseBe, ParseNlri, ParseOption, Rtcv4, Safi, Vpnv4Nexthop,
-    Vpnv4Nlri, get_parse_context, many0,
+    Vpnv4Nlri, many0,
 };
 
 use super::{AttrEmitter, RouteDistinguisher, Vpnv4Reach};
@@ -167,11 +167,10 @@ impl MpNlriReachAttr {
     }
 }
 
-// ParseBe implementations that read from thread-local context
+// Not used.
 impl ParseBe<MpNlriReachAttr> for MpNlriReachAttr {
     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
-        let opt = get_parse_context();
-        Self::parse_nlri_opt(input, opt)
+        Self::parse_nlri_opt(input, None)
     }
 }
 

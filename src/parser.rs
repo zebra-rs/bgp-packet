@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 
@@ -57,20 +56,6 @@ pub fn peek_bgp_length(input: &[u8]) -> usize {
     } else {
         0
     }
-}
-
-thread_local! {
-    static PARSE_CONTEXT: RefCell<Option<ParseOption>> = const { RefCell::new(None) };
-}
-
-pub fn set_parse_context(opt: Option<ParseOption>) {
-    PARSE_CONTEXT.with(|ctx| {
-        *ctx.borrow_mut() = opt;
-    });
-}
-
-pub fn get_parse_context() -> Option<ParseOption> {
-    PARSE_CONTEXT.with(|ctx| ctx.borrow().clone())
 }
 
 #[derive(Default, Debug, Clone)]

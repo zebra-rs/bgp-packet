@@ -5,8 +5,7 @@ use nom::error::{ErrorKind, make_error};
 use nom_derive::*;
 
 use crate::{
-    Afi, EvpnRoute, Ipv6Nlri, ParseBe, ParseNlri, ParseOption, Rtcv4, Safi, Vpnv4Nlri,
-    get_parse_context, many0,
+    Afi, EvpnRoute, Ipv6Nlri, ParseBe, ParseNlri, ParseOption, Rtcv4, Safi, Vpnv4Nlri, many0,
 };
 
 use super::{AttrEmitter, Vpnv4Unreach};
@@ -110,8 +109,7 @@ impl MpNlriUnreachAttr {
 
 impl ParseBe<MpNlriUnreachAttr> for MpNlriUnreachAttr {
     fn parse_be(input: &[u8]) -> nom::IResult<&[u8], Self> {
-        let opt = get_parse_context();
-        Self::parse_nlri_opt(input, opt)
+        Self::parse_nlri_opt(input, None)
     }
 }
 
