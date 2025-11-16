@@ -222,7 +222,7 @@ impl fmt::Display for MpNlriReachAttr {
                             )?;
                         }
                         EvpnRoute::Multicast(v) => {
-                            writeln!(f, " [{}]{}", v.rd, v.addr)?;
+                            writeln!(f, " [{}] {}:{}", v.rd, v.ether_tag, v.addr)?;
                         }
                     }
                 }
