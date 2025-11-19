@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fmt;
 
 use nom::IResult;
@@ -44,30 +45,51 @@ impl AfiSafi {
 
 // AFI/SAFI config
 #[derive(Debug, Default, Clone)]
-pub struct AfiSafis(pub Vec<AfiSafi>);
+pub struct AfiSafis<T>(pub BTreeMap<AfiSafi, T>);
 
-impl AfiSafis {
+impl<T> AfiSafis<T> {
+    pub fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+
     pub fn has(&self, afi_safi: &AfiSafi) -> bool {
-        self.0.iter().any(|x| x == afi_safi)
+        self.0.contains_key(afi_safi)
     }
 
-    pub fn push(&mut self, afi_safi: AfiSafi) {
-        self.0.push(afi_safi);
+    pub fn get(&self, afi_safi: &AfiSafi) -> Option<&T> {
+        self.0.get(afi_safi)
     }
 
-    pub fn set(&mut self, afi_safi: AfiSafi) {
-        if !self.has(&afi_safi) {
-            self.push(afi_safi);
-        }
+    pub fn get_mut(&mut self, afi_safi: &AfiSafi) -> Option<&mut T> {
+        self.0.get_mut(afi_safi)
     }
 
-    pub fn remove(&mut self, afi_safi: &AfiSafi) -> bool {
-        if let Some(pos) = self.0.iter().position(|x| x == afi_safi) {
-            self.0.remove(pos);
-            true
-        } else {
-            false
-        }
+    pub fn insert(&mut self, afi_safi: AfiSafi, value: T) -> Option<T> {
+        self.0.insert(afi_safi, value)
+    }
+
+    pub fn remove(&mut self, afi_safi: &AfiSafi) -> Option<T> {
+        self.0.remove(afi_safi)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&AfiSafi, &T)> {
+        self.0.iter()
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &AfiSafi> {
+        self.0.keys()
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.0.values()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
