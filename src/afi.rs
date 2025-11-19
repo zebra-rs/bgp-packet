@@ -72,6 +72,14 @@ impl<T> AfiSafis<T> {
         self.0.remove(afi_safi)
     }
 
+    pub fn set(&mut self, afi_safi: AfiSafi, value: T) -> Option<T> {
+        if !self.has(&afi_safi) {
+            self.insert(afi_safi, value)
+        } else {
+            None
+        }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (&AfiSafi, &T)> {
         self.0.iter()
     }
