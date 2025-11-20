@@ -6,7 +6,7 @@ use bytes::BytesMut;
 use crate::{
     AddPathValue, AfiSafi, CapAddPath, CapAs4, CapDynamic, CapEmit, CapEnhancedRefresh,
     CapExtended, CapFqdn, CapLlgr, CapMultiProtocol, CapPathLimit, CapRefresh, CapRefreshCisco,
-    CapRestart, CapVersion, CapabilityPacket, LLGRValue, PathLimitValue, RestartValue,
+    CapRestart, CapVersion, CapabilityPacket, LlgrValue, PathLimitValue, RestartValue,
 };
 
 #[derive(Default, Debug, PartialEq, Clone)]
@@ -20,7 +20,7 @@ pub struct BgpCap {
     pub as4: Option<CapAs4>,
     pub dynamic: Option<CapDynamic>,
     pub addpath: BTreeMap<AfiSafi, AddPathValue>,
-    pub llgr: BTreeMap<AfiSafi, LLGRValue>,
+    pub llgr: BTreeMap<AfiSafi, LlgrValue>,
     pub fqdn: Option<CapFqdn>,
     pub version: Option<CapVersion>,
     pub path_limit: BTreeMap<AfiSafi, PathLimitValue>,

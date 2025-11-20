@@ -10,7 +10,7 @@ use crate::{Afi, CapCode, CapEmit, ParseBe, Safi, u32_u24};
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapLlgr {
-    pub values: Vec<LLGRValue>,
+    pub values: Vec<LlgrValue>,
 }
 
 impl CapLlgr {
@@ -21,14 +21,14 @@ impl CapLlgr {
 
 #[bitfield(u8, debug = true)]
 #[derive(PartialEq)]
-pub struct LLGRFlags {
+pub struct LlgrFlags {
     #[bits(7)]
     pub resvd: u8,
     #[bits(1)]
     pub f_bit: bool,
 }
 
-impl ParseBe<LLGRFlags> for LLGRFlags {
+impl ParseBe<LlgrFlags> for LlgrFlags {
     fn parse_be(input: &[u8]) -> IResult<&[u8], Self> {
         let (input, flags) = be_u8(input)?;
         Ok((input, flags.into()))
@@ -36,20 +36,20 @@ impl ParseBe<LLGRFlags> for LLGRFlags {
 }
 
 #[derive(Debug, PartialEq, NomBE, Clone)]
-pub struct LLGRValue {
+pub struct LlgrValue {
     pub afi: Afi,
     pub safi: Safi,
-    flags: LLGRFlags,
+    flags: LlgrFlags,
     #[nom(Parse = "be_u24")]
     stale_time: u32,
 }
 
-impl LLGRValue {
+impl LlgrValue {
     pub fn new(afi: Afi, safi: Safi, stale_time: u32) -> Self {
         Self {
             afi,
             safi,
-            flags: LLGRFlags::default(),
+            flags: LlgrFlags::default(),
             stale_time,
         }
     }

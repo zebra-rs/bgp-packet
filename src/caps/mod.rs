@@ -26,7 +26,7 @@ pub mod addpath;
 pub use addpath::{AddPathValue, CapAddPath};
 
 pub mod llgr;
-pub use llgr::{CapLlgr, LLGRValue};
+pub use llgr::{CapLlgr, LlgrValue};
 
 pub mod fqdn;
 pub use fqdn::CapFqdn;
