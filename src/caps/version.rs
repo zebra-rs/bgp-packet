@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 use bytes::{BufMut, BytesMut};
 use nom_derive::*;
@@ -14,6 +14,14 @@ impl CapVersion {
     pub fn new(version: &str) -> Self {
         Self {
             version: version.into(),
+        }
+    }
+
+    pub fn version(&self) -> Cow<'_, str> {
+        if self.version.is_empty() {
+            Cow::Borrowed("n/a")
+        } else {
+            String::from_utf8_lossy(&self.version)
         }
     }
 }

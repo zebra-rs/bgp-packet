@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 use bytes::{BufMut, BytesMut};
 use nom::IResult;
@@ -19,6 +19,22 @@ impl CapFqdn {
         Self {
             hostname: hostname.into(),
             domain: domain.into(),
+        }
+    }
+
+    pub fn hostname(&self) -> Cow<'_, str> {
+        if self.hostname.is_empty() {
+            Cow::Borrowed("n/a")
+        } else {
+            String::from_utf8_lossy(&self.hostname)
+        }
+    }
+
+    pub fn domain(&self) -> Cow<'_, str> {
+        if self.domain.is_empty() {
+            Cow::Borrowed("n/a")
+        } else {
+            String::from_utf8_lossy(&self.domain)
         }
     }
 }
