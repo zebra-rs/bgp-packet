@@ -136,7 +136,7 @@ impl AttrEmitter for Vpnv4Reach {
             // Label
             buf.put(&update.label.to_bytes()[..]);
             // RD
-            buf.put_u16(update.rd.typ.clone() as u16);
+            buf.put_u16(update.rd.typ as u16);
             buf.put(&update.rd.val[..]);
             // Prefix
             let plen = nlri_psize(update.nlri.prefix.prefix_len());
@@ -178,7 +178,7 @@ impl AttrEmitter for Vpnv4Unreach {
             // Label
             buf.put(&withdraw.label.to_bytes()[..]);
             // RD
-            buf.put_u16(withdraw.rd.typ.clone() as u16);
+            buf.put_u16(withdraw.rd.typ as u16);
             buf.put(&withdraw.rd.val[..]);
             // Prefix
             let plen = nlri_psize(withdraw.nlri.prefix.prefix_len());
