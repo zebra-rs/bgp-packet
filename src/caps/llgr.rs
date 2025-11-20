@@ -53,6 +53,10 @@ impl LLGRValue {
             stale_time,
         }
     }
+
+    pub fn stale_time(&self) -> u32 {
+        self.stale_time
+    }
 }
 
 impl CapEmit for CapLlgr {
