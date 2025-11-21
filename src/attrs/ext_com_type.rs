@@ -1,6 +1,5 @@
-use std::fmt;
-
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use strum_macros::{Display, EnumString};
 
 #[repr(u8)]
 pub enum ExtCommunityType {
@@ -10,23 +9,26 @@ pub enum ExtCommunityType {
     TransOpaque = 0x03,
 }
 
-#[derive(TryFromPrimitive, IntoPrimitive)]
+#[derive(TryFromPrimitive, IntoPrimitive, EnumString, Display)]
 #[repr(u8)]
 pub enum ExtCommunitySubType {
+    #[strum(serialize = "rt")]
     RouteTarget = 0x02,
+    #[strum(serialize = "soo")]
     RouteOrigin = 0x03,
+    #[strum(serialize = "opqque")]
     Opaque = 0x0c,
 }
 
-impl fmt::Display for ExtCommunitySubType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::RouteTarget => write!(f, "rt"),
-            Self::RouteOrigin => write!(f, "soo"),
-            Self::Opaque => write!(f, "opaque"),
-        }
-    }
-}
+// impl fmt::Display for ExtCommunitySubType {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             Self::RouteTarget => write!(f, "rt"),
+//             Self::RouteOrigin => write!(f, "soo"),
+//             Self::Opaque => write!(f, "opaque"),
+//         }
+//     }
+// }
 
 impl ExtCommunitySubType {
     pub fn display(val: u8) -> String {
@@ -38,24 +40,29 @@ impl ExtCommunitySubType {
     }
 }
 
-#[derive(TryFromPrimitive, IntoPrimitive)]
+#[derive(TryFromPrimitive, IntoPrimitive, EnumString, Display)]
 #[repr(u16)]
 pub enum TunnelType {
+    #[strum(serialize = "L2TPv3")]
     L2tpv3 = 1,
+    #[strum(serialize = "GRE")]
     Gre = 2,
+    #[strum(serialize = "VXLAN")]
     Vxlan = 8,
+    #[strum(serialize = "NVGRE")]
     Nvgre = 9,
+    #[strum(serialize = "MPLS-in-GRE")]
     MplsGre = 11,
 }
 
-impl fmt::Display for TunnelType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::L2tpv3 => write!(f, "L2TPv3"),
-            Self::Gre => write!(f, "GRE"),
-            Self::Vxlan => write!(f, "VXLAN"),
-            Self::Nvgre => write!(f, "NVGRE"),
-            Self::MplsGre => write!(f, "MPLS-in-GRE"),
-        }
-    }
-}
+// impl fmt::Display for TunnelType {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             Self::L2tpv3 => write!(f, "L2TPv3"),
+//             Self::Gre => write!(f, "GRE"),
+//             Self::Vxlan => write!(f, "VXLAN"),
+//             Self::Nvgre => write!(f, "NVGRE"),
+//             Self::MplsGre => write!(f, "MPLS-in-GRE"),
+//         }
+//     }
+// }

@@ -1,9 +1,9 @@
 use std::fmt;
-use std::str::FromStr;
 
 use bytes::{BufMut, BytesMut};
 use nom::{IResult, number::complete::be_u8};
 use nom_derive::*;
+use strum_macros::{Display, EnumString};
 
 use super::{CapCode, CapEmit};
 use crate::{Afi, Safi};
@@ -16,11 +16,12 @@ pub struct AddPathValue {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, PartialEq, Copy, Ord, PartialOrd, Eq)]
+#[derive(Debug, Clone, PartialEq, Copy, Ord, PartialOrd, Eq, Display, EnumString)]
 pub enum AddPathSendReceive {
     Receive = 1,
     Send = 2,
     SendReceive = 3,
+    #[strum(disabled)]
     Unknown(u8),
 }
 
@@ -64,29 +65,8 @@ impl AddPathSendReceive {
     }
 }
 
-impl fmt::Display for AddPathSendReceive {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::Receive => "Receive",
-            Self::Send => "Send",
-            Self::SendReceive => "SendReceive",
-            Self::Unknown(_) => "Unknown",
-        })
-    }
-}
-
-impl FromStr for AddPathSendReceive {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "send" => Ok(AddPathSendReceive::Send),
-            "receive" => Ok(AddPathSendReceive::Receive),
-            "send-receive" => Ok(AddPathSendReceive::SendReceive),
-            _ => Err(format!("Invalid AddPathSendReceive value: {}", s)),
-        }
-    }
-}
+// Display and FromStr implementation now provided by strum macros
+// Note: The Unknown variant will display as "Unknown" and cannot be parsed from string
 
 #[derive(Debug, Default, PartialEq, NomBE, Clone)]
 pub struct CapAddPath {
