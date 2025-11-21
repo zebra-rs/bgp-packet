@@ -1,33 +1,42 @@
 use std::collections::BTreeMap;
-use std::fmt;
 
 use nom::IResult;
 use nom::number::complete::{be_u8, be_u16};
 use nom_derive::*;
 use serde::Serialize;
+use strum_macros::Display;
 
 #[repr(u16)]
-#[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash, Serialize)]
+#[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash, Serialize, Display)]
 pub enum Afi {
     #[default]
+    #[strum(serialize = "IPv4")]
     Ip = 1,
+    #[strum(serialize = "IPv6")]
     Ip6 = 2,
+    #[strum(serialize = "L2VPN")]
     L2vpn = 25,
+    #[strum(to_string = "Unknown({0})")]
     Unknown(u16),
 }
 
 #[repr(u8)]
-#[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash, Serialize)]
+#[derive(Debug, Default, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Hash, Serialize, Display)]
 pub enum Safi {
     #[default]
     Unicast = 1,
     Multicast = 2,
+    #[strum(serialize = "MPLS Label")]
     MplsLabel = 4,
     Encap = 7,
+    #[strum(serialize = "EVPN")]
     Evpn = 70,
+    #[strum(serialize = "MPLS VPN")]
     MplsVpn = 128,
+    #[strum(serialize = "RTC")]
     Rtc = 132,
     Flowspec = 133,
+    #[strum(to_string = "Unknown({0})")]
     Unknown(u8),
 }
 
@@ -175,30 +184,4 @@ impl Safi {
     }
 }
 
-impl fmt::Display for Afi {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Afi::Ip => write!(f, "IPv4"),
-            Afi::Ip6 => write!(f, "IPv6"),
-            Afi::L2vpn => write!(f, "L2VPN"),
-            Afi::Unknown(v) => write!(f, "Unknown({})", v),
-        }
-    }
-}
-
-impl fmt::Display for Safi {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use Safi::*;
-        match self {
-            Unicast => write!(f, "Unicast"),
-            Multicast => write!(f, "Muulticast"),
-            MplsLabel => write!(f, "MPLS Label"),
-            Encap => write!(f, "Encap"),
-            Evpn => write!(f, "EVPN"),
-            MplsVpn => write!(f, "MPLS VPN"),
-            Rtc => write!(f, "RTC"),
-            Flowspec => write!(f, "Flowspec"),
-            Unknown(v) => write!(f, "Unknown({})", v),
-        }
-    }
-}
+// Display implementation now provided by strum_macros::Display
